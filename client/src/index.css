@@ -3,7 +3,65 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root {
+    height: 100dvh;
+    max-height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+  }
+
+  body {
+    background-color: #F4EFE6;
+    color: #1C1A17;
+    font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'VT323', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
   }
+}
+
+/* ── Subtle paper grain texture ── */
+.bg-grain {
+  background-color: #F4EFE6;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ── Ticket perforation tear line ── */
+.ticket-perforation {
+  position: relative;
+  border-top: 2px dashed #1C1A17;
+}
+
+.ticket-notch-left,
+.ticket-notch-right {
+  position: absolute;
+  top: -9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #F4EFE6;
+}
+
+.ticket-notch-left  { left: -9px;  border-right: 2px solid #1C1A17; }
+.ticket-notch-right { right: -9px; border-left:  2px solid #1C1A17; }
+
+/* ── Map 3D Perspective Tilt ── */
+.map-perspective-tilt {
+  transform: perspective(1000px) rotateX(19deg);
+  transform-origin: top center;
+}
+
+#svg-map-wrapper svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }

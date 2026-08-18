@@ -1,0 +1,18 @@
+import express from 'express';
+import {
+  getVapidPublicKey,
+  subscribePush,
+  unsubscribePush,
+  getPreferences,
+  updatePreferences,
+} from '../controllers/pushController.js';
+
+const router = express.Router();
+
+router.get('/vapid-public-key', getVapidPublicKey);
+router.post('/subscribe', subscribePush);
+router.post('/unsubscribe', unsubscribePush);
+router.get('/preferences', getPreferences);
+router.patch('/preferences', updatePreferences);
+
+export default router;

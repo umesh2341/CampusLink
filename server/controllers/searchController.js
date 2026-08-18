@@ -20,13 +20,42 @@ const formatDirectionalAnswer = (buildingName, floor, roomNumber) => {
 export const search = async (req, res) => {
   const { q } = req.query;
   if (!q || !q.trim()) {
-    return res.json({ departments: [], events: [], results: [] });
+    return res.json({ buildings: [], departments: [], events: [], results: [] });
   }
 
   const queryPattern = `%${q.trim()}%`;
+  const cleanQuery = `%${q.trim().replace(/[-\s]/g, '')}%`;
 
   try {
-    // 1. Search departments by name OR any alias in aliases array
+    // 1. Search buildings by name, svg_element_id, or stripped whitespace/hyphens
+    const bldQuery = `
+      SELECT 
+        b.id,
+        b.name,
+        b.category,
+        b.svg_element_id
+      FROM buildings b
+      WHERE b.name ILIKE $1 
+         OR b.svg_element_id ILIKE $1
+         OR replace(replace(b.name, ' ', ''), '-', '') ILIKE $2
+         OR replace(replace(b.svg_element_id, ' ', ''), '-', '') ILIKE $2
+      ORDER BY b.name ASC
+      LIMIT 10;
+    `;
+    const bldRes = await pool.query(bldQuery, [queryPattern, cleanQuery]);
+
+    const buildings = bldRes.rows.map((b) => ({
+      id: b.id,
+      type: 'building',
+      name: b.name,
+      building_id: b.id,
+      building_name: b.name,
+      building_svg_element_id: b.svg_element_id,
+      building_category: b.category,
+      location_string: b.name,
+    }));
+
+    // 2. Search departments by name OR any alias in aliases array
     const deptQuery = `
       SELECT 
         d.id,
@@ -63,7 +92,7 @@ export const search = async (req, res) => {
       location_string: formatDirectionalAnswer(d.building_name, d.floor, d.room_number),
     }));
 
-    // 2. Search active & approved events by title, description, or organizing club
+    // 3. Search active & approved events by title, description, or organizing club
     const eventQuery = `
       SELECT 
         e.*,
@@ -100,10 +129,11 @@ export const search = async (req, res) => {
       location_string: formatDirectionalAnswer(e.building_name, e.floor, e.room_number),
     }));
 
-    const results = [...departments, ...events];
+    const results = [...buildings, ...departments, ...events];
 
     res.json({
       query: q.trim(),
+      buildings,
       departments,
       events,
       results,

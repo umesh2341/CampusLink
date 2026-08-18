@@ -1,12 +1,13 @@
+import 'dotenv/config'; // Must be first to populate process.env for imported modules
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import os from 'os';
 import pool from './db/pool.js';
 import buildingRoutes from './routes/buildingRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
-
-dotenv.config();
+import pushRoutes from './routes/pushRoutes.js';
+import clubRoutes from './routes/clubRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,11 +20,12 @@ app.use(express.json());
 app.use('/api/buildings', buildingRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/push', pushRoutes);
+app.use('/api/clubs', clubRoutes);
 
 // Basic health check route
 app.get('/api/health', async (req, res) => {
   try {
-    // Try executing a simple query to verify db pool connectivity
     const dbCheck = await pool.query('SELECT NOW()');
     res.json({
       status: 'OK',
@@ -41,7 +43,22 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+// Helper to log network URLs
+const logNetworkUrls = (port) => {
+  console.log(`\n  Express Backend Server Ready`);
+  console.log(`  ➜  Local:   http://localhost:${port}/`);
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        console.log(`  ➜  Network: http://${net.address}:${port}/`);
+      }
+    }
+  }
+  console.log('');
+};
+
+// Start server listening on 0.0.0.0 for network access
+app.listen(PORT, '0.0.0.0', () => {
+  logNetworkUrls(PORT);
 });
