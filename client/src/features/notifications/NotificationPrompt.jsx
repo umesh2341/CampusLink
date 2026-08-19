@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { subscribeUserToPush } from '../lib/pushNotifications';
+import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
 
 const DISMISS_KEY = 'campuslink_push_prompt_dismissed';
 const DISMISS_DAYS = 7;

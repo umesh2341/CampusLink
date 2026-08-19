@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import InteractiveMap from './components/InteractiveMap';
-import SidePanel from './components/SidePanel';
-import EventDetailModal from './components/EventDetailModal';
-import SearchBar from './components/SearchBar';
-import { fetchBuildings, fetchBuildingEvents } from './lib/api';
-import useAppStore from './store/useAppStore';
-import NotificationPrompt from './components/NotificationPrompt';
-import NotificationPreferencesModal from './components/NotificationPreferencesModal';
-import NavMenuDrawer from './components/NavMenuDrawer';
+import InteractiveMap from './features/map/InteractiveMap';
+import SidePanel from './features/events/SidePanel';
+import EventDetailModal from './features/events/EventDetailModal';
+import SearchBar from './features/search/SearchBar';
+import { fetchBuildings, fetchBuildingEvents } from './shared/lib/api';
+import useAppStore from './shared/store/useAppStore';
+import NotificationPrompt from './features/notifications/NotificationPrompt';
+import NotificationPreferencesModal from './features/notifications/NotificationPreferencesModal';
+import NavMenuDrawer from './shared/components/NavMenuDrawer';
 
-const AddEventForm = lazy(() => import('./components/AddEventForm'));
+const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 import {
   User,
   Calendar,

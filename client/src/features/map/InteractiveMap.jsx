@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import mapSvg from '../assets/campus-map.svg?raw';
+import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
-import { buildingCoords } from '../lib/buildingCoords';
-import useAppStore from '../store/useAppStore';
+import { buildingCoords } from '../../shared/lib/buildingCoords';
+import useAppStore from '../../shared/store/useAppStore';
 
 function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeEventsMap, lastViewedMap = {} }) {
   const viewportRef = useRef(null);

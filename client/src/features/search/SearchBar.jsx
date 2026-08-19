@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSearchResults } from '../lib/api';
-import { useDebounce } from '../hooks/useDebounce';
+import { fetchSearchResults } from '../../shared/lib/api';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import { Search, X, MapPin, Calendar, Building2, Loader2 } from 'lucide-react';
 
 function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult }) {

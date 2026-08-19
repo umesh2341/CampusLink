@@ -8,6 +8,7 @@ import eventRoutes from './routes/eventRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import clubRoutes from './routes/clubRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/clubs', clubRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Basic health check route
 app.get('/api/health', async (req, res) => {

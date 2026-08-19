@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X } from 'lucide-react';
+import CropImageModal from './CropImageModal';
+import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X, UploadCloud, Trash2 } from 'lucide-react';
 
 /* Shared input / select classes */
 const inputCls =
@@ -26,7 +27,9 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
   const [organizingClub, setOrganizingClub] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [cropImageSrc, setCropImageSrc] = useState(null);
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,6 +76,43 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
     );
   }
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('PLEASE SELECT A VALID IMAGE FILE.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('IMAGE SIZE EXCEEDS 5MB LIMIT.');
+      return;
+    }
+
+    setError('');
+    // Open the cropper modal instead of setting the file directly
+    setCropImageSrc(URL.createObjectURL(file));
+    // Clear the input value so the same file can be selected again if cancelled
+    e.target.value = null;
+  };
+
+  const handleCropComplete = (croppedBlob) => {
+    setImageFile(croppedBlob);
+    setImagePreview(URL.createObjectURL(croppedBlob));
+    setCropImageSrc(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropImageSrc(null);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description || !startTime || !endTime || !buildingId || !organizingClub) {
@@ -80,7 +120,39 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
       return;
     }
     setLoading(true); setError('');
+
+    let finalImageUrl = null;
+
     try {
+      // 1. Upload image if one was selected
+      if (imageFile) {
+        // Fetch signature from our backend
+        const sigRes = await fetch('/api/uploads/signature');
+        if (!sigRes.ok) throw new Error('Failed to get upload signature from server');
+        const { signature, timestamp, api_key, cloud_name } = await sigRes.json();
+
+        // Upload directly to Cloudinary
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('signature', signature);
+        formData.append('timestamp', timestamp);
+        formData.append('api_key', api_key);
+
+        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const uploadErr = await uploadRes.json();
+          throw new Error(uploadErr.error?.message || 'Failed to upload image to Cloudinary');
+        }
+
+        const uploadData = await uploadRes.json();
+        finalImageUrl = uploadData.secure_url;
+      }
+
+      // 2. Submit the event data with the new image URL (or null)
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +165,7 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
           room_number: roomNumber.trim() || null,
           organizing_club: organizingClub,
           tags: selectedTags,
-          image_url: imageUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
+          image_url: finalImageUrl,
           registration_url: registrationUrl,
         }),
       });
@@ -248,11 +320,42 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
             className={`${inputCls} normal-case resize-none`} required />
         </div>
 
-        {/* Image URL */}
+        {/* Image File Upload */}
         <div>
-          <label className={labelCls}>IMAGE BANNER URL (OPTIONAL)</label>
-          <input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-            placeholder="https://…" className={`${inputCls} normal-case`} />
+          <label className={labelCls}>EVENT BANNER IMAGE (OPTIONAL)</label>
+          {!imagePreview ? (
+            <div className="relative">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageSelect}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                style={{ opacity: 0 }}
+              />
+              <div className={`${inputCls} relative z-10 flex flex-col items-center justify-center py-6 border-dashed bg-paper text-muted hover:text-ink hover:border-ink transition-colors`}>
+                <UploadCloud className="w-6 h-6 mb-2" />
+                <span className="font-bold">CLICK OR DRAG TO UPLOAD IMAGE</span>
+                <span className="text-[10px] mt-1">(MAX 5MB, JPG/PNG)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="relative border-2 border-ink rounded-xs overflow-hidden bg-paper group">
+              <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover" />
+              <div className="absolute inset-0 bg-ink/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button 
+                  type="button" 
+                  onClick={clearImage}
+                  className="bg-card border-2 border-ink text-ink px-3 py-1.5 rounded-xs font-bold uppercase text-xs hover:bg-signal transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  REMOVE
+                </button>
+              </div>
+              <div className="absolute bottom-0 inset-x-0 bg-ink text-card text-[10px] p-1 font-mono text-center truncate">
+                {imageFile.name}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Registration URL */}
@@ -267,6 +370,15 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
           {loading ? 'SUBMITTING…' : 'SUBMIT EVENT PASS'}
         </button>
       </form>
+
+      {/* Cropper Modal */}
+      {cropImageSrc && (
+        <CropImageModal 
+          imageSrc={cropImageSrc} 
+          onComplete={handleCropComplete} 
+          onCancel={handleCropCancel} 
+        />
+      )}
     </div>
   );
 }

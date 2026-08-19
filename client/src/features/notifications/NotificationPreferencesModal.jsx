@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bell, BellOff, Check, Loader2, ShieldCheck } from 'lucide-react';
-import { subscribeUserToPush } from '../lib/pushNotifications';
+import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
 
 const ALL_TAGS = [
   { id: 'hackathon', label: 'Hackathon' },
