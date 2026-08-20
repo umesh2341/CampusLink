@@ -17,7 +17,47 @@ const AVAILABLE_TAGS = [
   { id: 'college_official', label: 'College Official' },
 ];
 
-function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
+const FALLBACK_BUILDINGS = [
+  { id: 'academic-block', name: 'Academic Block', category: 'academic' },
+  { id: 'auditorium', name: 'Auditorium', category: 'other' },
+  { id: 'bh1', name: 'Boys Hostel 1', category: 'hostel_boys' },
+  { id: 'bh2', name: 'Boys Hostel 2', category: 'hostel_boys' },
+  { id: 'bh5', name: 'Boys Hostel 5', category: 'hostel_boys' },
+  { id: 'bh6', name: 'Boys Hostel 6', category: 'hostel_boys' },
+  { id: 'bh7', name: 'Boys Hostel 7', category: 'hostel_boys' },
+  { id: 'bh8', name: 'Boys Hostel 8', category: 'hostel_boys' },
+  { id: 'bh9', name: 'Boys Hostel 9', category: 'hostel_boys' },
+  { id: 'bh10', name: 'Boys Hostel 10', category: 'hostel_boys' },
+  { id: 'bh12', name: 'Boys Hostel 12', category: 'hostel_boys' },
+  { id: 'c-block', name: 'C Block', category: 'academic' },
+  { id: 'center-of-datascience', name: 'Center for Data Science', category: 'academic' },
+  { id: 'cricket-court1', name: 'Cricket Court', category: 'sports' },
+  { id: 'd-block', name: 'D Block', category: 'academic' },
+  { id: 'drive-ev', name: 'EV Charging Station', category: 'other' },
+  { id: 'eblock', name: 'E Block', category: 'academic' },
+  { id: 'electronic-office', name: 'Electronics Office', category: 'academic' },
+  { id: 'f-block', name: 'F Block', category: 'academic' },
+  { id: 'food-court', name: 'Food Court', category: 'cafeteria' },
+  { id: 'football-court1', name: 'Football Court 1', category: 'sports' },
+  { id: 'football-court2', name: 'Football Court 2', category: 'sports' },
+  { id: 'garden', name: 'Garden', category: 'gardens' },
+  { id: 'gym', name: 'Gym', category: 'sports' },
+  { id: 'indoor-stadium', name: 'Indoor Stadium', category: 'sports' },
+  { id: 'lh1', name: 'Ladies Hostel 1', category: 'hostel_girls' },
+  { id: 'lh2', name: 'Ladies Hostel 2', category: 'hostel_girls' },
+  { id: 'lh3', name: 'Ladies Hostel 3', category: 'hostel_girls' },
+  { id: 'lh4', name: 'Ladies Hostel 4', category: 'hostel_girls' },
+  { id: 'lh5', name: 'Ladies Hostel 5', category: 'hostel_girls' },
+  { id: 'library', name: 'Library', category: 'academic' },
+  { id: 'playground', name: 'Playground', category: 'sports' },
+  { id: 'sc-block', name: 'Science Block', category: 'academic' },
+  { id: 'studentsection', name: 'Student Section', category: 'admin' },
+  { id: 'unknown1', name: 'Utility Building 1', category: 'other' },
+  { id: 'unknown', name: 'Utility Building 2', category: 'other' }
+];
+
+function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }) {
+  const availableBuildings = (buildings && buildings.length > 0) ? buildings : FALLBACK_BUILDINGS;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -281,7 +321,11 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
           <select value={buildingId} onChange={e => setBuildingId(e.target.value)}
             className={inputCls} required>
             <option value="">SELECT BUILDING LOCATION</option>
-            {buildings.map(b => <option key={b.id} value={b.id}>{b.name.toUpperCase()}</option>)}
+            {availableBuildings.map(b => (
+              <option key={b.id || b.svg_element_id} value={b.id || b.svg_element_id}>
+                {b.name.toUpperCase()}
+              </option>
+            ))}
           </select>
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, BellOff, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
 import { API_BASE } from '../../shared/lib/api';
@@ -122,15 +123,30 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={onClose} />
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
+          {/* Backdrop */}
+          <motion.div
+            key="np-backdrop"
+            className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
 
-      {/* Modal Dialog */}
-      <div className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 space-y-4 max-h-[90vh] flex flex-col">
+          {/* Modal Dialog */}
+          <motion.div
+            key="np-modal"
+            className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 space-y-4 max-h-[90vh] flex flex-col"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: 'tween', duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          >
         
         {/* Header */}
         <div className="flex justify-between items-center border-b-2 border-ink pb-3 shrink-0">
@@ -284,9 +300,10 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
             CLOSE PREFERENCES
           </button>
         </div>
-
-      </div>
+      </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   );
 }
 

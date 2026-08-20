@@ -1,11 +1,31 @@
-/* CampusLink Web Push Service Worker */
+/* CampusLink Service Worker — Push Notifications + Offline Caching */
+
+const CACHE_NAME = 'campuslink-v1';
+const PRECACHE_URLS = [
+  '/',
+  '/index.html',
+  '/favicon.svg',
+  '/icon.svg',
+  '/icon-maskable.svg',
+  '/manifest.json',
+];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      )
+    ).then(() => clients.claim())
+  );
 });
 
 // Handle incoming Web Push notifications
@@ -54,4 +74,43 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// Handle fetch events for offline caching
+// Strategy: Cache-first for same-origin static assets, network-first for API requests
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Skip non-GET requests and cross-origin requests
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // API requests: network-first (never cache API responses)
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Same-origin static assets: cache-first, fall back to network
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          // Only cache successful responses for navigation/resource requests
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
 });

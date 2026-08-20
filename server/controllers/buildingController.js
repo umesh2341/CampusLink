@@ -1,6 +1,5 @@
 import pool from '../db/pool.js';
 import { detectSchema } from '../db/schemaHelper.js';
-
 const FALLBACK_BUILDINGS = [
   { id: 'c-block', svg_element_id: 'c-block', name: 'C Block', category: 'academic', active_event_count: 0 },
   { id: 'd-block', svg_element_id: 'd-block', name: 'D Block', category: 'academic', active_event_count: 0 },

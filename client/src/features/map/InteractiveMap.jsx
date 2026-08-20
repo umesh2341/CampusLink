@@ -1,10 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { LocateFixed, Plus, Minus } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
+import LiveUserMarker from './LiveUserMarker';
 import { buildingCoords } from '../../shared/lib/buildingCoords';
 import useAppStore from '../../shared/store/useAppStore';
 
-function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeEventsMap, lastViewedMap = {} }) {
+function InteractiveMap({
+  buildings,
+  selectedBuilding,
+  onSelectBuilding,
+  activeEventsMap,
+  lastViewedMap = {},
+  userLocation = null,
+}) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
   const svgWrapperRef = useRef(null);
@@ -18,18 +27,22 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
   const [zoom, setZoomState] = useState(() => savedZoom ?? 0.25);
   const [pan, setPanState]   = useState(() => savedPan ?? { x: 0, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
   const dragDistanceRef = useRef(0);
-  const pinchDistRef = useRef(0);
+  const pinchStartDistRef = useRef(0);
+  const pinchStartZoomRef = useRef(0.25);
+  const pinchStartPanRef = useRef({ x: 0, y: 0 });
   const pinchCenterRef = useRef({ x: 0, y: 0 });
+  const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
 
-  const MAX_ZOOM = 1.8;
+  const MAX_ZOOM = 3.5;
   const getMinZoom = () => {
     if (!viewportRef.current) return 0.25;
     const vWidth = viewportRef.current.clientWidth;
-    return Math.max(0.25, vWidth / 1576);
+    return Math.max(0.22, vWidth / 1580);
   };
 
   const updateTransform = (newZoom, newPan) => {
@@ -40,12 +53,11 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
     if (viewportRef.current) {
       const vWidth = viewportRef.current.clientWidth;
       const vHeight = viewportRef.current.clientHeight;
-      const mapWidth = 1576 * clampedZoom;
-      const mapHeight = 2893 * clampedZoom;
+      const mapWidth = 1580 * clampedZoom;
+      const mapHeight = 2891 * clampedZoom;
 
-      // Horizontal clamping: provide clearance so left/right outer road networks & boundaries are fully visible
       let clampedX = newPan.x;
-      const horizontalMargin = 40;
+      const horizontalMargin = 80;
 
       if (mapWidth >= vWidth) {
         const minPanX = vWidth - mapWidth - horizontalMargin;
@@ -58,10 +70,9 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
         clampedX = Math.min(maxPanX, Math.max(minPanX, newPan.x));
       }
 
-      // Vertical clamping: provide clearance so floating SearchBar & Bottom Nav don't obscure map shapes
       let clampedY = newPan.y;
-      const topMargin = 75;    // Clearance for floating SearchBar at top
-      const bottomMargin = 70; // Clearance for Bottom Navigation Bar at bottom
+      const topMargin = 90;
+      const bottomMargin = 90;
 
       if (mapHeight > vHeight) {
         const minPanY = vHeight - mapHeight - bottomMargin;
@@ -91,32 +102,43 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
     }
   }, []);
 
-  // Desktop Mouse Scroll Wheel Zoom centered on cursor position
+  // Desktop Mouse Scroll Wheel & Trackpad Zoom
   useEffect(() => {
     const viewportEl = viewportRef.current;
     if (!viewportEl) return;
 
+    let wheelTimeout;
+
     const handleWheel = (e) => {
       e.preventDefault();
+      setIsInteracting(true);
+
       const rect = viewportEl.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const zoomDelta = -e.deltaY * 0.0012;
+      // Exponential zoom scaling for smooth response across trackpads & mouse wheels
+      const factor = Math.exp(-e.deltaY * 0.0022);
       const minZ = getMinZoom();
-      const newZoom = Math.min(MAX_ZOOM, Math.max(minZ, zoom * (1 + zoomDelta)));
+      const newZoom = Math.min(MAX_ZOOM, Math.max(minZ, zoom * factor));
 
-      if (Math.abs(newZoom - zoom) < 0.001) return;
+      if (Math.abs(newZoom - zoom) < 0.0005) return;
 
       const scaleRatio = newZoom / zoom;
       const newPanX = mouseX - (mouseX - pan.x) * scaleRatio;
       const newPanY = mouseY - (mouseY - pan.y) * scaleRatio;
 
       updateTransform(newZoom, { x: newPanX, y: newPanY });
+
+      clearTimeout(wheelTimeout);
+      wheelTimeout = setTimeout(() => setIsInteracting(false), 150);
     };
 
     viewportEl.addEventListener('wheel', handleWheel, { passive: false });
-    return () => viewportEl.removeEventListener('wheel', handleWheel);
+    return () => {
+      viewportEl.removeEventListener('wheel', handleWheel);
+      clearTimeout(wheelTimeout);
+    };
   }, [zoom, pan]);
 
   // Set up event listeners on SVG elements after mounting/updating
@@ -131,8 +153,7 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
         el.style.transition = 'opacity 0.2s ease, filter 0.2s ease';
 
         const clickHandler = (e) => {
-          // If the user was dragging (distance > 5px), do not treat as a building tap
-          if (dragDistanceRef.current > 5) return;
+          if (dragDistanceRef.current > 6) return;
           e.stopPropagation();
           onSelectBuilding(building);
         };
@@ -201,7 +222,7 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
         const vWidth = viewportRef.current.clientWidth;
         const vHeight = viewportRef.current.clientHeight;
 
-        const focusZoom = Math.min(MAX_ZOOM, Math.max(0.5, (vWidth / 1580) * 1.6));
+        const focusZoom = Math.min(MAX_ZOOM, Math.max(0.6, (vWidth / 1580) * 1.8));
         const targetPanX = (vWidth / 2) - (coords.x * focusZoom);
         const targetPanY = (vHeight / 2) - (coords.y * focusZoom);
 
@@ -214,6 +235,7 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     setIsDragging(true);
+    setIsInteracting(true);
     dragStart.current = { x: e.clientX, y: e.clientY };
     panStart.current = { ...pan };
     dragDistanceRef.current = 0;
@@ -229,25 +251,63 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
 
   const handleMouseUpOrLeave = () => {
     setIsDragging(false);
+    setIsInteracting(false);
   };
 
-  // Mobile Touch Drag & Pinch-to-Zoom Handlers
+  // Double-click to zoom in on cursor
+  const handleDoubleClick = (e) => {
+    if (!viewportRef.current) return;
+    const rect = viewportRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const newZoom = Math.min(MAX_ZOOM, zoom * 1.6);
+    const scaleRatio = newZoom / zoom;
+    const newPanX = mouseX - (mouseX - pan.x) * scaleRatio;
+    const newPanY = mouseY - (mouseY - pan.y) * scaleRatio;
+    updateTransform(newZoom, { x: newPanX, y: newPanY });
+  };
+
+  // Mobile Touch Drag & Continuous Pinch-to-Zoom
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
+      setIsInteracting(true);
       dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       panStart.current = { ...pan };
       dragDistanceRef.current = 0;
+
+      // Handle double-tap to zoom
+      const now = Date.now();
+      const tapX = e.touches[0].clientX;
+      const tapY = e.touches[0].clientY;
+      if (now - lastTapRef.current.time < 300 && Math.hypot(tapX - lastTapRef.current.x, tapY - lastTapRef.current.y) < 25) {
+        if (viewportRef.current) {
+          const rect = viewportRef.current.getBoundingClientRect();
+          const midX = tapX - rect.left;
+          const midY = tapY - rect.top;
+          const newZoom = Math.min(MAX_ZOOM, zoom * 1.7);
+          const scaleRatio = newZoom / zoom;
+          const newPanX = midX - (midX - pan.x) * scaleRatio;
+          const newPanY = midY - (midY - pan.y) * scaleRatio;
+          updateTransform(newZoom, { x: newPanX, y: newPanY });
+        }
+        lastTapRef.current = { time: 0, x: 0, y: 0 };
+        return;
+      }
+      lastTapRef.current = { time: now, x: tapX, y: tapY };
+
     } else if (e.touches.length === 2) {
       setIsDragging(true);
+      setIsInteracting(true);
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      pinchDistRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      pinchStartDistRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      pinchStartZoomRef.current = zoom;
+      pinchStartPanRef.current = { ...pan };
       pinchCenterRef.current = {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2,
       };
-      panStart.current = { ...pan };
     }
   };
 
@@ -263,28 +323,30 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-      if (pinchDistRef.current > 0) {
-        const scaleFactor = currentDist / pinchDistRef.current;
+      if (pinchStartDistRef.current > 0 && viewportRef.current) {
+        const ratio = currentDist / pinchStartDistRef.current;
         const minZ = getMinZoom();
-        const newZoom = Math.min(MAX_ZOOM, Math.max(minZ, zoom * scaleFactor));
-        if (viewportRef.current) {
-          const rect = viewportRef.current.getBoundingClientRect();
-          const midX = pinchCenterRef.current.x - rect.left;
-          const midY = pinchCenterRef.current.y - rect.top;
-          const scaleRatio = newZoom / zoom;
-          const newPanX = midX - (midX - pan.x) * scaleRatio;
-          const newPanY = midY - (midY - pan.y) * scaleRatio;
-          updateTransform(newZoom, { x: newPanX, y: newPanY });
-        }
-        pinchDistRef.current = currentDist;
+        const targetZoom = Math.min(MAX_ZOOM, Math.max(minZ, pinchStartZoomRef.current * ratio));
+        
+        const rect = viewportRef.current.getBoundingClientRect();
+        const midX = pinchCenterRef.current.x - rect.left;
+        const midY = pinchCenterRef.current.y - rect.top;
+        
+        const scaleRatio = targetZoom / pinchStartZoomRef.current;
+        const newPanX = midX - (midX - pinchStartPanRef.current.x) * scaleRatio;
+        const newPanY = midY - (midY - pinchStartPanRef.current.y) * scaleRatio;
+        
+        updateTransform(targetZoom, { x: newPanX, y: newPanY });
       }
     }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    pinchDistRef.current = 0;
+    setIsInteracting(false);
+    pinchStartDistRef.current = 0;
   };
+
 
   const handleTouchStartRef = useRef(handleTouchStart);
   const handleTouchMoveRef = useRef(handleTouchMove);
@@ -315,8 +377,49 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
     };
   }, []);
 
+  // Smooth Button Zoom In / Out Handlers
+  const handleZoomIn = () => {
+    if (!viewportRef.current) return;
+    const vpWidth = viewportRef.current.clientWidth;
+    const vpHeight = viewportRef.current.clientHeight;
+    const centerX = vpWidth / 2;
+    const centerY = vpHeight / 2;
+    const newZoom = Math.min(MAX_ZOOM, zoom * 1.35);
+    const scaleRatio = newZoom / zoom;
+    const newPanX = centerX - (centerX - pan.x) * scaleRatio;
+    const newPanY = centerY - (centerY - pan.y) * scaleRatio;
+    updateTransform(newZoom, { x: newPanX, y: newPanY });
+  };
+
+  const handleZoomOut = () => {
+    if (!viewportRef.current) return;
+    const vpWidth = viewportRef.current.clientWidth;
+    const vpHeight = viewportRef.current.clientHeight;
+    const centerX = vpWidth / 2;
+    const centerY = vpHeight / 2;
+    const minZ = getMinZoom();
+    const newZoom = Math.max(minZ, zoom / 1.35);
+    const scaleRatio = newZoom / zoom;
+    const newPanX = centerX - (centerX - pan.x) * scaleRatio;
+    const newPanY = centerY - (centerY - pan.y) * scaleRatio;
+    updateTransform(newZoom, { x: newPanX, y: newPanY });
+  };
+
+  const handleCenterOnUser = () => {
+    if (!userLocation || userLocation.x === null || userLocation.y === null) return;
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const vpWidth = vp.clientWidth;
+    const vpHeight = vp.clientHeight;
+    const targetZoom = 0.95; // Close-up walking view
+    const newPanX = vpWidth / 2 - userLocation.x * targetZoom;
+    const newPanY = vpHeight / 2 - userLocation.y * targetZoom;
+    updateTransform(targetZoom, { x: newPanX, y: newPanY });
+  };
+
   return (
-    <div className="w-full h-full relative bg-canvas select-none overflow-hidden map-perspective-tilt touch-none" ref={viewportRef}>
+    <div className="w-full h-full relative bg-canvas select-none overflow-hidden touch-none" ref={viewportRef}>
+
       {/* Zoomable & Pannable Container */}
       <div
         ref={interactionLayerRef}
@@ -325,13 +428,14 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
+        onDoubleClick={handleDoubleClick}
       >
         <div
           ref={containerRef}
           className="absolute origin-top-left w-[1580px] h-[2891px]"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+            transition: isInteracting || isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           {/* Static SVG Map Layer */}
@@ -370,6 +474,75 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
                 />
               );
             })}
+
+            {/* Live User Location Beacon Marker */}
+            {userLocation && userLocation.x !== null && userLocation.y !== null && (
+              <LiveUserMarker
+                x={userLocation.x}
+                y={userLocation.y}
+                accuracyRadius={userLocation.accuracyRadius}
+                userName={userLocation.userName || 'YOU'}
+                heading={userLocation.heading}
+                isInsideCampus={userLocation.isInsideCampus}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
+      <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">
+        
+        {/* Live GPS Telemetry Pill (when tracking active) */}
+        {userLocation && userLocation.x !== null && userLocation.y !== null && (
+          <div className="bg-card border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
+            <div className="flex items-center justify-between font-bold text-signal">
+              <span>● LIVE GPS</span>
+              <span className="text-[7.5px] sm:text-[8px] text-muted font-bold">±{Math.round(userLocation.accuracy || 0)}m</span>
+            </div>
+            <div className="text-[7.5px] sm:text-[8px] text-muted font-bold truncate">
+              {userLocation.latitude?.toFixed(5)}, {userLocation.longitude?.toFixed(5)}
+            </div>
+            <div className="text-[7.5px] sm:text-[8px] text-muted font-bold truncate">
+              SVG: ({userLocation.x}, {userLocation.y}) {userLocation.speed ? `| ${userLocation.speed.toFixed(1)}m/s` : ''}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Center On Me Button */}
+          {userLocation && userLocation.x !== null && userLocation.y !== null && (
+            <button
+              type="button"
+              onClick={handleCenterOnUser}
+              title="Center and zoom on your live position"
+              className="flex items-center gap-1 font-mono text-[10px] sm:text-[11px] font-bold uppercase bg-signal hover:bg-signal/90 text-ink border-2 border-ink px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs shadow-hard active:translate-y-[1px] active:shadow-none transition-all cursor-pointer whitespace-nowrap"
+            >
+              <LocateFixed className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ink animate-pulse" />
+              <span>CENTER ON ME</span>
+            </button>
+          )}
+
+          {/* Smooth Zoom Controls (+ / -) */}
+          <div className="flex flex-col border-2 border-ink bg-card rounded-xs shadow-hard overflow-hidden">
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              title="Zoom In"
+              aria-label="Zoom in on map"
+              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper border-b border-ink text-ink transition-colors flex items-center justify-center cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              title="Zoom Out"
+              aria-label="Zoom out on map"
+              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper text-ink transition-colors flex items-center justify-center cursor-pointer"
+            >
+              <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -378,3 +551,5 @@ function InteractiveMap({ buildings, selectedBuilding, onSelectBuilding, activeE
 }
 
 export default InteractiveMap;
+
+
