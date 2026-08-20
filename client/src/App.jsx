@@ -1,14 +1,30 @@
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import InteractiveMap from './features/map/InteractiveMap';
 import SidePanel from './features/events/SidePanel';
 import EventDetailModal from './features/events/EventDetailModal';
 import SearchBar from './features/search/SearchBar';
-import { fetchBuildings, fetchBuildingEvents, API_BASE } from './shared/lib/api';
+import {
+  fetchBuildings,
+  fetchBuildingEvents,
+  fetchClubs,
+  updateUserLocation,
+  stopUserLocationSharing,
+  API_BASE,
+} from './shared/lib/api';
+import {
+  convertGpsToCampusCoordinates,
+  calculateDistanceMeters,
+} from './shared/lib/locationToCampusCoordinates';
+
 import useAppStore from './shared/store/useAppStore';
 import NotificationPrompt from './features/notifications/NotificationPrompt';
 import NotificationPreferencesModal from './features/notifications/NotificationPreferencesModal';
 import NavMenuDrawer from './shared/components/NavMenuDrawer';
+import ClubsDirectoryModal from './features/clubs/ClubsDirectoryModal';
+import ClubCardModal from './features/clubs/ClubCardModal';
+import FeedbackModal from './shared/components/FeedbackModal';
+import LocationConsentModal from './features/map/LocationConsentModal';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 import {
@@ -22,6 +38,8 @@ import {
   Map as MapIcon,
   PlusCircle,
   UserCheck,
+  Users,
+  Navigation,
 } from 'lucide-react';
 
 function App() {
@@ -32,6 +50,7 @@ function App() {
   const isSidePanelOpen   = useAppStore(s => s.isSidePanelOpen);
   const lastViewedMap     = useAppStore(s => s.lastViewedMap);
   const selectBuilding    = useAppStore(s => s.selectBuilding);
+  const highlightBuilding = useAppStore(s => s.highlightBuilding);
   const closeSidePanel    = useAppStore(s => s.closeSidePanel);
 
   // ── Local UI state (not shared across layers) ──────────────
@@ -48,15 +67,41 @@ function App() {
   const [isAboutOpen,         setIsAboutOpen]         = useState(false);
   const [isFilterOpen,        setIsFilterOpen]        = useState(false);
   const [isAllEventsOpen,     setIsAllEventsOpen]     = useState(false);
+  const [isClubsOpen,         setIsClubsOpen]         = useState(false);
+  const [selectedClub,        setSelectedClub]        = useState(null);
+  const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false);
+  const [isFeedbackOpen,      setIsFeedbackOpen]      = useState(false);
   const [isOrganizer,         setIsOrganizer]         = useState(true);
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
 
-  // ── React Query — data fetching (untouched) ─────────────────
+  // ── Live Location Tracker State ─────────────────────────────
+  const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
+  const [userLocation,         setUserLocation]           = useState(null);
+  const [isLocationConsentOpen,setIsLocationConsentOpen]  = useState(false);
+  const [locationError,        setLocationError]          = useState(null);
+
+  const watchIdRef = useRef(null);
+  const lastSentPosRef = useRef(null);
+  const lastSentTimeRef = useRef(0);
+
+  const LOCATION_CONFIG = {
+    minimumDistanceMeters: 4,
+    minimumUpdateIntervalMs: 5000,
+    maximumAccuracyMeters: 65,
+  };
+
+  // ── React Query — data fetching ─────────────────────────────
 
   const { data: buildings = [] } = useQuery({
     queryKey: ['buildings'],
     queryFn: fetchBuildings,
     staleTime: 60_000,
+  });
+
+  const { data: clubs = [] } = useQuery({
+    queryKey: ['clubs'],
+    queryFn: fetchClubs,
+    staleTime: 120_000,
   });
 
   // Handle URL deep-linking for ?event_id=... (from Web Push Notification clicks)
@@ -135,9 +180,9 @@ function App() {
   /** Search result: department or building tap — highlight on map ONLY, do NOT open side panel */
   const handleSelectBuildingFromSearch = (building) => highlightBuilding(building);
 
-  /** Search result: event tap — select building, open side panel, and open event pass modal */
+  /** Search result: event tap — highlight building on map and open event pass modal ONLY (without side panel) */
   const handleSelectEventFromSearch = (building, event) => {
-    selectBuilding(building);
+    highlightBuilding(building);
     handleSelectEvent(event);
   };
 
@@ -150,6 +195,129 @@ function App() {
     queryClient.invalidateQueries({ queryKey: ['buildings'] });
     queryClient.invalidateQueries({ queryKey: ['buildingEvents'] });
   };
+
+  // ── Geolocation Tracking Handlers ───────────────────────────
+
+  const stopTracking = async () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsLiveLocationActive(false);
+    setUserLocation(null);
+    lastSentPosRef.current = null;
+    lastSentTimeRef.current = 0;
+    try {
+      await stopUserLocationSharing();
+    } catch (e) {
+      console.warn('Backend location sharing cleanup error:', e.message);
+    }
+  };
+
+  const handleToggleLiveLocation = () => {
+    if (isLiveLocationActive) {
+      stopTracking();
+    } else {
+      setLocationError(null);
+      setIsLocationConsentOpen(true);
+    }
+  };
+
+  const startTrackingAfterConsent = () => {
+    setIsLocationConsentOpen(false);
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      setIsLocationConsentOpen(true);
+      return;
+    }
+
+    setIsLiveLocationActive(true);
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 15000,
+    };
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      async (position) => {
+        const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
+        const now = Date.now();
+
+        // Convert real GPS coordinates to SVG canvas position via Affine transformation
+        const campusPos = convertGpsToCampusCoordinates({ latitude, longitude, accuracy });
+
+        // Update local live marker position
+        setUserLocation({
+          x: campusPos.x,
+          y: campusPos.y,
+          latitude,
+          longitude,
+          accuracy,
+          accuracyRadius: campusPos.accuracyRadiusPixels,
+          heading,
+          speed,
+          isInsideCampus: campusPos.isInsideCampus,
+          userName: 'JOHN DOE',
+        });
+
+        // Throttle backend updates by distance and minimum time threshold
+        let shouldSend = false;
+        if (!lastSentPosRef.current) {
+          shouldSend = true;
+        } else {
+          const dist = calculateDistanceMeters(
+            lastSentPosRef.current.latitude,
+            lastSentPosRef.current.longitude,
+            latitude,
+            longitude
+          );
+          const timeElapsed = now - lastSentTimeRef.current;
+
+          if (dist >= LOCATION_CONFIG.minimumDistanceMeters || timeElapsed >= LOCATION_CONFIG.minimumUpdateIntervalMs) {
+            shouldSend = true;
+          }
+        }
+
+        if (shouldSend) {
+          lastSentPosRef.current = { latitude, longitude };
+          lastSentTimeRef.current = now;
+          try {
+            await updateUserLocation({
+              latitude,
+              longitude,
+              accuracy,
+              altitude,
+              heading,
+              speed,
+            });
+          } catch (err) {
+            console.warn('Backend location sync error:', err.message);
+          }
+        }
+      },
+      (err) => {
+        console.warn('Geolocation watch error:', err.message);
+        let msg = 'Unable to retrieve your location.';
+        if (err.code === 1) msg = 'Location permission was denied. Please allow location access in your browser settings.';
+        else if (err.code === 2) msg = 'GPS signal is currently unavailable on campus.';
+        else if (err.code === 3) msg = 'Location request timed out. Retrying...';
+        setLocationError(msg);
+        setIsLiveLocationActive(false);
+      },
+      geoOptions
+    );
+  };
+
+  // Cleanup geolocation watcher on component unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────
   return (
@@ -172,6 +340,20 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Live Location Tracker Button */}
+          <button
+            onClick={handleToggleLiveLocation}
+            title={isLiveLocationActive ? "Stop live tracking" : "Enable live tracking on campus map"}
+            className={`flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-1 rounded-xs border-2 uppercase transition-all active:translate-y-[1px] ${
+              isLiveLocationActive
+                ? 'bg-confirm text-white border-ink shadow-hard'
+                : 'bg-paper text-ink border-ink hover:bg-card'
+            }`}
+          >
+            <Navigation className={`w-3.5 h-3.5 ${isLiveLocationActive ? 'text-white' : 'text-signal'}`} />
+            <span>{isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
+          </button>
+
           {isOrganizer && (
             <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-signal text-ink border-2 border-ink px-2 py-0.5 rounded-xs uppercase">
               <UserCheck className="w-3.5 h-3.5" />
@@ -216,6 +398,7 @@ function App() {
             onSelectBuilding={handleSelectBuilding}
             activeEventsMap={activeEventsMap}
             lastViewedMap={lastViewedMap}
+            userLocation={userLocation}
           />
         ) : (
           <Suspense fallback={
@@ -235,6 +418,8 @@ function App() {
           isOpen={isNavMenuOpen}
           onClose={() => setIsNavMenuOpen(false)}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
+          onOpenFeedback={() => setIsFeedbackOpen(true)}
+          onOpenAbout={() => setIsAboutOpen(true)}
           isOrganizer={isOrganizer}
         />
       </main>
@@ -253,6 +438,44 @@ function App() {
         event={selectedEvent}
         isOpen={isEventModalOpen}
         onClose={() => { setIsEventModalOpen(false); setSelectedEvent(null); }}
+      />
+
+      {/* ── Clubs Directory Modal ── */}
+      <ClubsDirectoryModal
+        isOpen={isClubsOpen}
+        onClose={() => setIsClubsOpen(false)}
+        clubs={clubs}
+        activeEvents={allActiveEvents}
+        onSelectClub={(club) => {
+          setSelectedClub(club);
+          setIsClubDetailOpen(true);
+        }}
+      />
+
+      {/* ── Club Detail Card Modal ── */}
+      <ClubCardModal
+        club={selectedClub}
+        isOpen={isClubDetailOpen}
+        onClose={() => {
+          setIsClubDetailOpen(false);
+          setSelectedClub(null);
+        }}
+        activeEvents={allActiveEvents}
+        onSelectEvent={handleSelectEvent}
+      />
+
+      {/* ── Student Feedback Modal ── */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      {/* ── Live Location Consent & Privacy Modal ── */}
+      <LocationConsentModal
+        isOpen={isLocationConsentOpen}
+        onClose={() => setIsLocationConsentOpen(false)}
+        onConfirm={startTrackingAfterConsent}
+        error={locationError}
       />
 
       {/* ── Profile Modal ── */}
@@ -427,10 +650,16 @@ function App() {
           )}
         </button>
 
-        <button onClick={() => setIsAboutOpen(true)}
+        <button onClick={async () => {
+          if (allActiveEvents.length === 0) {
+            const evts = await fetchAllActiveEvents();
+            setAllActiveEvents(evts);
+          }
+          setIsClubsOpen(true);
+        }}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
-          <Info className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wider">ABOUT</span>
+          <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>
         </button>
 
         <button onClick={() => setIsProfileOpen(true)}
@@ -454,3 +683,4 @@ function App() {
 }
 
 export default App;
+

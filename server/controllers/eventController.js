@@ -51,6 +51,18 @@ export const createEvent = async (req, res) => {
 
     const isApproved = auto_approve === true || process.env.NODE_ENV === 'development';
 
+    // Resolve building_id to UUID if svg_element_id was passed
+    let resolvedBuildingId = building_id;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(building_id)) {
+      const bRes = await pool.query(
+        'SELECT id FROM buildings WHERE svg_element_id = $1 OR id::text = $1 LIMIT 1',
+        [building_id]
+      );
+      if (bRes.rows.length > 0) {
+        resolvedBuildingId = bRes.rows[0].id;
+      }
+    }
+
     const query = `
       INSERT INTO events (
         title, description, start_time, end_time, building_id, 
@@ -64,7 +76,7 @@ export const createEvent = async (req, res) => {
       description,
       start_time,
       end_time,
-      building_id,
+      resolvedBuildingId,
       organizing_club,
       image_url || null,
       registration_url || null,
