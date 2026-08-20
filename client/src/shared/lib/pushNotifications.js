@@ -1,3 +1,5 @@
+import { API_BASE } from './api';
+
 /**
  * Helper to convert a Base64 VAPID key to a Uint8Array for PushManager
  */
@@ -31,7 +33,7 @@ export async function subscribeUserToPush() {
   await navigator.serviceWorker.ready;
 
   // Fetch VAPID public key from backend
-  const keyRes = await fetch('/api/push/vapid-public-key');
+  const keyRes = await fetch(`${API_BASE}/api/push/vapid-public-key`);
   if (!keyRes.ok) {
     throw new Error('Failed to fetch VAPID public key from server.');
   }
@@ -47,7 +49,7 @@ export async function subscribeUserToPush() {
   const subJson = subscription.toJSON();
 
   // Post subscription payload to backend
-  const res = await fetch('/api/push/subscribe', {
+  const res = await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -74,7 +76,7 @@ export async function unsubscribeUserFromPush() {
 
   if (subscription) {
     const subJson = subscription.toJSON();
-    await fetch('/api/push/unsubscribe', {
+    await fetch(`${API_BASE}/api/push/unsubscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: subJson.endpoint }),

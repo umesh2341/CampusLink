@@ -4,7 +4,7 @@ import InteractiveMap from './features/map/InteractiveMap';
 import SidePanel from './features/events/SidePanel';
 import EventDetailModal from './features/events/EventDetailModal';
 import SearchBar from './features/search/SearchBar';
-import { fetchBuildings, fetchBuildingEvents } from './shared/lib/api';
+import { fetchBuildings, fetchBuildingEvents, API_BASE } from './shared/lib/api';
 import useAppStore from './shared/store/useAppStore';
 import NotificationPrompt from './features/notifications/NotificationPrompt';
 import NotificationPreferencesModal from './features/notifications/NotificationPreferencesModal';
@@ -65,7 +65,7 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('event_id');
     if (eventId) {
-      fetch(`/api/events/${eventId}`)
+      fetch(`${API_BASE}/api/events/${eventId}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((eventData) => {
           if (eventData) {

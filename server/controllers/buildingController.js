@@ -38,4 +38,4 @@ export const getBuildingEvents = async (req, res) => {
     console.error(`Error fetching events for building ${id}:`, error);
     res.status(500).json({ error: 'Internal server error' });
   }
-};
+}

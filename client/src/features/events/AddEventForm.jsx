@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import CropImageModal from './CropImageModal';
 import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X, UploadCloud, Trash2 } from 'lucide-react';
+import { API_BASE } from '../../shared/lib/api';
 
 /* Shared input / select classes */
 const inputCls =
@@ -127,7 +128,7 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
       // 1. Upload image if one was selected
       if (imageFile) {
         // Fetch signature from our backend
-        const sigRes = await fetch('/api/uploads/signature');
+        const sigRes = await fetch(`${API_BASE}/api/uploads/signature`);
         if (!sigRes.ok) throw new Error('Failed to get upload signature from server');
         const { signature, timestamp, api_key, cloud_name } = await sigRes.json();
 
@@ -153,7 +154,7 @@ function AddEventForm({ buildings, isOrganizer = false, onBack, onSuccess }) {
       }
 
       // 2. Submit the event data with the new image URL (or null)
-      const res = await fetch('/api/events', {
+      const res = await fetch(`${API_BASE}/api/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
