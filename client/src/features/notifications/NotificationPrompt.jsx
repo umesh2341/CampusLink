@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
 
@@ -56,10 +57,17 @@ function NotificationPrompt() {
     setIsVisible(false);
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 font-mono animate-in slide-in-from-bottom duration-300">
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          key="push-prompt"
+          className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 font-mono"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ type: 'tween', duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+        >
       <div className="bg-card border-2 border-ink shadow-hard-lg rounded-xs p-4 space-y-3 relative">
 
         {/* Top Header */}
@@ -107,7 +115,9 @@ function NotificationPrompt() {
           </button>
         </div>
       </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

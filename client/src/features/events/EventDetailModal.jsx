@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Users, MapPin, ArrowUpRight, Ticket } from 'lucide-react';
 
 const TAG_LABELS = {
@@ -9,31 +10,46 @@ const TAG_LABELS = {
   college_official: 'COLLEGE OFFICIAL',
 };
 
+const fmtDate = (t) => new Date(t).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+const fmtTime = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+const getLocationString = (floor, roomNumber) => {
+  const parts = [];
+  if (floor?.trim()) { const f = floor.trim(); parts.push(/floor/i.test(f) ? f : `Floor: ${f}`); }
+  if (roomNumber?.trim()) { const r = roomNumber.trim(); parts.push(/room|lab|hall/i.test(r) ? r : `Room: ${r}`); }
+  return parts.length ? parts.join(', ') : null;
+};
+
 function EventDetailModal({ event, isOpen, onClose }) {
-  if (!isOpen || !event) return null;
-
-  const fmtDate = (t) => new Date(t).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  const fmtTime = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  const getLocationString = (floor, roomNumber) => {
-    const parts = [];
-    if (floor?.trim()) { const f = floor.trim(); parts.push(/floor/i.test(f) ? f : `Floor: ${f}`); }
-    if (roomNumber?.trim()) { const r = roomNumber.trim(); parts.push(/room|lab|hall/i.test(r) ? r : `Room: ${r}`); }
-    return parts.length ? parts.join(', ') : null;
-  };
-
-  const locationStr = getLocationString(event.floor, event.room_number);
-  const venueStr = event.building_name
+  const locationStr = event ? getLocationString(event.floor, event.room_number) : null;
+  const venueStr = event?.building_name
     ? `${event.building_name}${locationStr ? ` (${locationStr})` : ''}`
     : (locationStr || 'Campus Grounds');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={onClose} />
+    <AnimatePresence>
+      {isOpen && event && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono">
+          {/* Backdrop */}
+          <motion.div
+            key="ed-backdrop"
+            className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
 
-      {/* ── Ticket Stub Card ── */}
-      <div className="relative z-50 w-full max-w-md sm:max-w-lg bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col max-h-[92vh] overflow-hidden">
+          {/* ── Ticket Stub Card ── */}
+          <motion.div
+            key="ed-card"
+            className="relative z-50 w-full max-w-md sm:max-w-lg bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col max-h-[92vh] overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'tween', duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          >
 
         {/* ── Top Bar (ticket header) ── */}
         <div className="bg-ink text-paper px-4 py-2 flex items-center justify-between shrink-0">
@@ -150,8 +166,10 @@ function EventDetailModal({ event, isOpen, onClose }) {
             </a>
           </div>
         )}
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 

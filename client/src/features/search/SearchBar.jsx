@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSearchResults } from '../../shared/lib/api';
 import { useDebounce } from '../../shared/hooks/useDebounce';
@@ -110,7 +111,7 @@ function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult })
               <p className="font-bold text-ink uppercase">— No matches found</p>
               <p className="text-[11px]">No matching building, department, or event for "{debouncedQuery}".</p>
             </div>
-          ) : results.map((item) => {
+          ) : results.map((item, index) => {
             const isDept = item.type === 'department';
             const isBld = item.type === 'building';
             const isEvt = item.type === 'event';
@@ -125,8 +126,11 @@ function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult })
             };
 
             return (
-              <div
+              <motion.div
                 key={`${item.type}-${item.id}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15, delay: index * 0.03 }}
                 onClick={handleClick}
                 className="p-3 hover:bg-paper cursor-pointer transition-colors group active:translate-y-[1px]"
               >
@@ -169,7 +173,7 @@ function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult })
                     CATEGORY: <strong className="text-ink">{item.building_category.replace(/_/g, ' ')}</strong>
                   </p>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>

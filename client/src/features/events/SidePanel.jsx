@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Users, MapPin } from 'lucide-react';
 
 const categoryLabels = {
@@ -12,7 +13,22 @@ const categoryLabels = {
   other:        { label: 'Other/Misc',     dot: 'bg-category-other-misc-fill' },
 };
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isDesktop;
+}
+
 function SidePanel({ building, events, isOpen, onClose, onSelectEvent }) {
+  const isDesktop = useIsDesktop();
+
   if (!building) return null;
 
   const categoryInfo = categoryLabels[building.category] || { label: 'Unknown', dot: 'bg-gray-400' };
@@ -40,23 +56,29 @@ function SidePanel({ building, events, isOpen, onClose, onSelectEvent }) {
   };
 
   return (
-    <>
-      {/* Backdrop */}
+    <AnimatePresence>
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-ink/30 backdrop-blur-xs z-40 transition-opacity"
-          onClick={onClose}
-        />
-      )}
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="sidepanel-backdrop"
+            className="fixed inset-0 bg-ink/30 backdrop-blur-xs z-40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
 
-      {/* Side Panel / Bottom Sheet */}
-      <aside
-        className={`fixed z-50 bg-paper flex flex-col
-          inset-x-0 bottom-0 top-0
-          sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink
-          transition-transform duration-300 ease-out
-          ${isOpen ? 'translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'}`}
-      >
+          {/* Side Panel / Bottom Sheet */}
+          <motion.aside
+            key="sidepanel"
+            className="fixed z-50 bg-paper flex flex-col inset-x-0 bottom-0 top-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink"
+            initial={isDesktop ? { x: '100%' } : { y: '100%' }}
+            animate={{ x: 0, y: 0 }}
+            exit={isDesktop ? { x: '100%' } : { y: '100%' }}
+            transition={{ type: 'tween', duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+          >
         {/* ── Header ── */}
         <div className="border-b-2 border-ink p-4 flex items-start justify-between bg-card shrink-0">
           <div className="space-y-0.5">
@@ -133,8 +155,10 @@ function SidePanel({ building, events, isOpen, onClose, onSelectEvent }) {
             </div>
           )}
         </div>
-      </aside>
-    </>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 

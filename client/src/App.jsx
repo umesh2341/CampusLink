@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import InteractiveMap from './features/map/InteractiveMap';
 import SidePanel from './features/events/SidePanel';
@@ -153,6 +154,7 @@ function App() {
 
   // ─────────────────────────────────────────────────────────────
   return (
+    <MotionConfig reducedMotion="user">
     <div className="h-dvh max-h-dvh w-full bg-grain text-ink font-mono flex flex-col overflow-hidden fixed inset-0 select-none">
 
       {/* ── Kiosk Header Bar ── */}
@@ -256,10 +258,11 @@ function App() {
       />
 
       {/* ── Profile Modal ── */}
+      <AnimatePresence>
       {isProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={() => setIsProfileOpen(false)} />
-          <div className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-4">
+          <motion.div key="profile-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsProfileOpen(false)} />
+          <motion.div key="profile-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
             <div className="flex justify-between items-start border-b-2 border-ink pb-2">
               <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ PROFILE ]</h3>
               <button onClick={() => setIsProfileOpen(false)}
@@ -284,15 +287,17 @@ function App() {
               <input type="checkbox" checked={isOrganizer} onChange={(e) => setIsOrganizer(e.target.checked)}
                 className="w-4 h-4 accent-signal cursor-pointer" />
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* ── About Modal ── */}
+      <AnimatePresence>
       {isAboutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={() => setIsAboutOpen(false)} />
-          <div className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 space-y-3">
+          <motion.div key="about-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsAboutOpen(false)} />
+          <motion.div key="about-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 space-y-3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
             <div className="flex justify-between items-start border-b-2 border-ink pb-2">
               <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ ABOUT ]</h3>
               <button onClick={() => setIsAboutOpen(false)}
@@ -305,15 +310,17 @@ function App() {
               <p>Browse workshops, competitions, and society drives. Search departments to resolve exact floor &amp; room numbers.</p>
               <p className="text-muted text-[10px] border-t border-ink/20 pt-2">— Terminal Edition v2.0</p>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* ── Filter Modal ── */}
+      <AnimatePresence>
       {isFilterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={() => setIsFilterOpen(false)} />
-          <div className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-3">
+          <motion.div key="filter-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsFilterOpen(false)} />
+          <motion.div key="filter-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
             <div className="flex justify-between items-start border-b-2 border-ink pb-2">
               <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ FILTERS ]</h3>
               <button onClick={() => setIsFilterOpen(false)}
@@ -351,15 +358,17 @@ function App() {
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* ── All Events Modal ── */}
+      <AnimatePresence>
       {isAllEventsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={() => setIsAllEventsOpen(false)} />
-          <div className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 flex flex-col max-h-[80vh]">
+          <motion.div key="events-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsAllEventsOpen(false)} />
+          <motion.div key="events-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 flex flex-col max-h-[80vh]" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
             <div className="flex justify-between items-start border-b-2 border-ink pb-2 mb-3 shrink-0">
               <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ ALL EVENTS ]</h3>
               <button onClick={() => setIsAllEventsOpen(false)}
@@ -390,9 +399,10 @@ function App() {
                 ))
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* ── Terminal Bottom Nav Bar ── */}
       <nav className="bg-card border-t-2 border-ink px-3 py-3 flex items-center justify-around z-30 select-none shrink-0">
@@ -420,11 +430,20 @@ function App() {
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all relative focus:outline-none py-0.5">
           <Calendar className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">EVENTS</span>
+          <AnimatePresence>
           {totalActiveEventsCount > 0 && (
-            <span className="absolute -top-1 -right-2 bg-signal text-ink border border-ink text-[9px] font-bold font-mono px-1 rounded-xs leading-tight">
+            <motion.span
+              key="event-badge"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              className="absolute -top-1 -right-2 bg-signal text-ink border border-ink text-[9px] font-bold font-mono px-1 rounded-xs leading-tight"
+            >
               {totalActiveEventsCount}
-            </span>
+            </motion.span>
           )}
+          </AnimatePresence>
         </button>
 
         <button onClick={() => setIsAboutOpen(true)}
@@ -450,6 +469,7 @@ function App() {
       />
 
     </div>
+    </MotionConfig>
   );
 }
 
