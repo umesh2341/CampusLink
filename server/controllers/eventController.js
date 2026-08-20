@@ -1,13 +1,34 @@
 import pool from '../db/pool.js';
 import { dispatchEventPushNotification } from '../services/pushService.js';
+import { detectSchema } from '../db/schemaHelper.js';
 
 // GET /api/events/:id
 // Retrieve details for a single event
 export const getEventById = async (req, res) => {
   const { id } = req.params;
   try {
+    const schema = await detectSchema();
+    const bldCat = schema.buildings.category;
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+
     const query = `
-      SELECT e.*, b.name AS building_name, b.category AS building_category
+      SELECT 
+        e.id,
+        e.title,
+        e.description,
+        e.start_time,
+        e.end_time,
+        e.building_id,
+        e.image_url,
+        e.${evtReg} AS registration_url,
+        e.floor,
+        e.room_number,
+        e.${evtClub} AS organizing_club,
+        e.is_approved,
+        e.created_at,
+        b.name AS building_name,
+        b.${bldCat} AS building_category
       FROM events e
       JOIN buildings b ON e.building_id = b.id
       WHERE e.id = $1;
@@ -47,6 +68,10 @@ export const createEvent = async (req, res) => {
   }
 
   try {
+    const schema = await detectSchema();
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+
     const eventTags = Array.isArray(tags) ? tags : [];
 
     const isApproved = auto_approve === true || process.env.NODE_ENV === 'development';
@@ -54,10 +79,10 @@ export const createEvent = async (req, res) => {
     const query = `
       INSERT INTO events (
         title, description, start_time, end_time, building_id, 
-        organizing_club, image_url, registration_url, floor, room_number, tags, is_approved
+        ${evtClub}, image_url, ${evtReg}, floor, room_number, tags, is_approved
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING *;
+      RETURNING *, ${evtClub} AS organizing_club, ${evtReg} AS registration_url;
     `;
     const { rows } = await pool.query(query, [
       title,
@@ -93,11 +118,15 @@ export const createEvent = async (req, res) => {
 export const approveEvent = async (req, res) => {
   const { id } = req.params;
   try {
+    const schema = await detectSchema();
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+
     const query = `
       UPDATE events
       SET is_approved = TRUE
       WHERE id = $1
-      RETURNING *;
+      RETURNING *, ${evtClub} AS organizing_club, ${evtReg} AS registration_url;
     `;
     const { rows } = await pool.query(query, [id]);
     

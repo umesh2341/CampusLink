@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { detectSchema } from '../db/schemaHelper.js';
 
 // Format plain text directional answer: [Block/Building Name] -> [Floor] -> [Room Number]
 const formatDirectionalAnswer = (buildingName, floor, roomNumber) => {
@@ -27,12 +28,20 @@ export const search = async (req, res) => {
   const cleanQuery = `%${q.trim().replace(/[-\s]/g, '')}%`;
 
   try {
+    const schema = await detectSchema();
+    const bldCat = schema.buildings.category;
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+    const evtApprovedCond = schema.events.has_status 
+      ? `(e.is_approved = TRUE OR e.status = 'approved')` 
+      : `e.is_approved = TRUE`;
+
     // 1. Search buildings by name, svg_element_id, or stripped whitespace/hyphens
     const bldQuery = `
       SELECT 
         b.id,
         b.name,
-        b.category,
+        b.${bldCat} AS category,
         b.svg_element_id
       FROM buildings b
       WHERE b.name ILIKE $1 
@@ -66,7 +75,7 @@ export const search = async (req, res) => {
         b.id AS building_id,
         b.name AS building_name,
         b.svg_element_id AS building_svg_element_id,
-        b.category AS building_category
+        b.${bldCat} AS building_category
       FROM departments d
       JOIN buildings b ON d.building_id = b.id
       WHERE d.name ILIKE $1 
@@ -95,16 +104,26 @@ export const search = async (req, res) => {
     // 3. Search active & approved events by title, description, or organizing club
     const eventQuery = `
       SELECT 
-        e.*,
+        e.id,
+        e.title,
+        e.description,
+        e.start_time,
+        e.end_time,
+        e.building_id,
+        e.image_url,
+        e.${evtReg} AS registration_url,
+        e.floor,
+        e.room_number,
+        e.${evtClub} AS organizing_club,
         b.id AS building_id,
         b.name AS building_name,
         b.svg_element_id AS building_svg_element_id,
-        b.category AS building_category
+        b.${bldCat} AS building_category
       FROM events e
       JOIN buildings b ON e.building_id = b.id
-      WHERE e.is_approved = TRUE 
+      WHERE ${evtApprovedCond}
         AND e.end_time >= NOW()
-        AND (e.title ILIKE $1 OR e.description ILIKE $1 OR e.organizing_club ILIKE $1)
+        AND (e.title ILIKE $1 OR e.description ILIKE $1 OR e.${evtClub} ILIKE $1)
       ORDER BY e.start_time ASC
       LIMIT 10;
     `;
