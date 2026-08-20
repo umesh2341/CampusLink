@@ -9,6 +9,7 @@ import searchRoutes from './routes/searchRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import clubRoutes from './routes/clubRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import locationRoutes from './routes/locationRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +25,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/clubs', clubRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/location', locationRoutes);
 
 // Basic health check route
 app.get('/api/health', async (req, res) => {

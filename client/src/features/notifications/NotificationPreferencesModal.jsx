@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, BellOff, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
+import { API_BASE } from '../../shared/lib/api';
 
 const ALL_TAGS = [
   { id: 'hackathon', label: 'Hackathon' },
@@ -31,7 +32,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
     setLoadingSub(true);
     try {
       // Fetch clubs list first
-      const clubsRes = await fetch('/api/clubs');
+      const clubsRes = await fetch(`${API_BASE}/api/clubs`);
       if (clubsRes.ok) {
         const clubsData = await clubsRes.json();
         setClubs(clubsData);
@@ -101,7 +102,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
     if (!subscription) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/push/preferences', {
+      const res = await fetch(`${API_BASE}/api/push/preferences`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
