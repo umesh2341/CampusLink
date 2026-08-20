@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import InteractiveMap from './features/map/InteractiveMap';
 import SidePanel from './features/events/SidePanel';
