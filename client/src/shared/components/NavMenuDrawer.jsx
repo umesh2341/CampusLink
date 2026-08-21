@@ -8,7 +8,9 @@ function NavMenuDrawer({
   onOpenNotifications,
   onOpenFeedback,
   onOpenAbout,
+  onOpenAddNotice,
   isOrganizer,
+  isCoAdmin,
 }) {
   const menuItems = [
     {
@@ -55,6 +57,20 @@ function NavMenuDrawer({
       badge: 'V2.0',
     },
   ];
+
+  if (isCoAdmin) {
+    menuItems.unshift({
+      id: 'post_notice',
+      label: 'Post Notice',
+      description: 'Broadcast announcement to campus',
+      icon: Bell,
+      onClick: () => {
+        onClose();
+        if (onOpenAddNotice) onOpenAddNotice();
+      },
+      badge: 'CO-ADMIN',
+    });
+  }
 
   return (
     <AnimatePresence>

@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
 import CropImageModal from './CropImageModal';
 import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X, UploadCloud, Trash2 } from 'lucide-react';
 import { API_BASE } from '../../shared/lib/api';
@@ -66,7 +65,12 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
   const [buildingId, setBuildingId] = useState('');
   const [floor, setFloor] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
+  const [clubId, setClubId] = useState('');
   const [organizingClub, setOrganizingClub] = useState('');
+  const [clubSearch, setClubSearch] = useState('');
+  const [isClubDropdownOpen, setIsClubDropdownOpen] = useState(false);
+  const [clubs, setClubs] = useState([]);
+  const clubDropdownRef = useRef(null);
   const [selectedTags, setSelectedTags] = useState([]);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [imageFile, setImageFile] = useState(null);
@@ -82,6 +86,23 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
       prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
     );
   };
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/clubs`)
+      .then(res => res.json())
+      .then(data => setClubs(data))
+      .catch(err => console.error('Failed to fetch clubs:', err));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (clubDropdownRef.current && !clubDropdownRef.current.contains(e.target)) {
+        setIsClubDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   /* ── Access gate ── */
   if (!isOrganizer) {
@@ -157,7 +178,7 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !description || !startTime || !endTime || !buildingId || !organizingClub) {
+    if (!title || !description || !startTime || !endTime || !buildingId || !clubId || !organizingClub) {
       setError('PLEASE FILL IN ALL REQUIRED (*) FIELDS.');
       return;
     }
@@ -203,6 +224,7 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
           start_time: new Date(startTime).toISOString(),
           end_time:   new Date(endTime).toISOString(),
           building_id: buildingId,
+          club_id: clubId,
           floor: floor.trim() || null,
           room_number: roomNumber.trim() || null,
           organizing_club: organizingClub,
@@ -248,11 +270,59 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
             placeholder="E.G. HACKSOA HACKATHON" className={inputCls} required />
         </div>
 
-        {/* Club */}
-        <div>
+        {/* Club Searchable Dropdown */}
+        <div ref={clubDropdownRef} className="relative">
           <label className={labelCls}>ORGANIZING CLUB/SOCIETY *</label>
-          <input type="text" value={organizingClub} onChange={e => setOrganizingClub(e.target.value)}
-            placeholder="E.G. CODING CLUB" className={inputCls} required />
+          <div 
+            onClick={() => setIsClubDropdownOpen(true)}
+            className={`${inputCls} flex items-center justify-between cursor-pointer`}
+          >
+            <span className={organizingClub ? 'text-ink' : 'text-muted'}>
+              {organizingClub || 'SELECT A CLUB'}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-ink transition-transform ${isClubDropdownOpen ? 'rotate-180' : ''}`} />
+          </div>
+          
+          {isClubDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 bg-card border-2 border-ink shadow-hard-lg rounded-xs z-30 max-h-60 flex flex-col">
+              <div className="p-2 border-b-2 border-ink bg-paper sticky top-0">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="SEARCH CLUBS..."
+                  value={clubSearch}
+                  onChange={(e) => setClubSearch(e.target.value)}
+                  className="w-full font-mono text-xs border border-ink p-1.5 rounded-xs focus:outline-none uppercase"
+                />
+              </div>
+              <div className="overflow-y-auto overflow-x-hidden p-1">
+                {clubs
+                  .filter(c => c.name.toLowerCase().includes(clubSearch.toLowerCase()))
+                  .map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setClubId(c.id);
+                        setOrganizingClub(c.name);
+                        setIsClubDropdownOpen(false);
+                        setClubSearch('');
+                      }}
+                      className="p-2 flex items-center gap-2 hover:bg-signal/20 cursor-pointer text-xs uppercase"
+                    >
+                      {c.logo_url && (
+                        <img src={c.logo_url} alt={c.name} className="w-5 h-5 object-cover rounded-full border border-ink bg-white" />
+                      )}
+                      <span className="font-bold truncate">{c.name}</span>
+                    </div>
+                  ))}
+                {clubs.filter(c => c.name.toLowerCase().includes(clubSearch.toLowerCase())).length === 0 && (
+                  <div className="p-3 text-xs text-muted text-center italic">
+                    NO CLUBS FOUND
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tags Multi-select Checklist Dropdown */}

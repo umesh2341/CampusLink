@@ -14,7 +14,7 @@ function MapMarker({ x, y, badgeCount = 0, isUnseen = true, active = false, onCl
   const top  = (y / 2891) * 100;
 
   const chipBase =
-    'relative flex items-center justify-center px-1.5 py-0.5 border-2 border-ink rounded-xs font-mono text-[10px] font-bold leading-none tracking-tight shadow-hard transition-all duration-150 select-none cursor-pointer';
+    'relative flex items-center justify-center px-3.5 py-2 sm:px-4 sm:py-2.5 border-2 border-ink rounded-xs font-mono text-base sm:text-lg font-bold leading-none tracking-tight shadow-hard transition-all duration-150 select-none cursor-pointer';
 
   const chipColor = active
     ? 'bg-signal text-ink ring-2 ring-ink z-30'

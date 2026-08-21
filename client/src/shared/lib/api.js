@@ -31,11 +31,17 @@ export async function fetchSearchResults(query) {
 }
 
 /** Fetch list of all campus student clubs. */
-export async function fetchClubs() {
-  const res = await fetch('/api/clubs');
+export const fetchClubs = async () => {
+  const res = await fetch(`${API_BASE}/api/clubs`);
   if (!res.ok) throw new Error('Failed to fetch clubs');
   return res.json();
-}
+};
+
+export const fetchNotices = async () => {
+  const res = await fetch(`${API_BASE}/api/notices`);
+  if (!res.ok) throw new Error('Failed to fetch notices');
+  return res.json();
+};
 
 /** Update user's current GPS location on backend */
 export async function updateUserLocation(locationData, userId = '11111111-2222-3333-4444-555555555555') {

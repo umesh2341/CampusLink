@@ -4,7 +4,7 @@ import { X, Users, Search, ChevronRight, Sparkles, Filter } from 'lucide-react';
 
 const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY'];
 
-function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub }) {
+function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub, isLoading }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -37,14 +37,14 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
   return (
     <AnimatePresence>
       {isOpen && (
-      <div key="clubs-directory" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+      <div key="clubs-directory" className="absolute inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+          className="absolute inset-0 bg-ink/40 backdrop-blur-xs"
           onClick={onClose}
         />
 
@@ -54,7 +54,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative z-50 w-full max-w-md sm:max-w-xl bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col max-h-[88vh] overflow-hidden"
+          className="relative z-50 w-full max-w-md sm:max-w-xl bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col h-full max-h-full overflow-hidden"
         >
           {/* Kiosk Header */}
           <div className="bg-ink text-paper px-4 py-2.5 flex items-center justify-between shrink-0">
@@ -114,9 +114,15 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
             </div>
           </div>
 
-          {/* Clubs Grid List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-grain">
-            {filteredClubs.length === 0 ? (
+          {/* Scrollable Body / Grid */}
+          <div className="flex-1 overflow-y-auto bg-grain p-4 space-y-2">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-signal">
+                <span className="font-mono text-sm font-bold tracking-widest uppercase animate-pulse">
+                  [ LOADING CLUBS... ]
+                </span>
+              </div>
+            ) : filteredClubs.length === 0 ? (
               <div className="p-8 text-center bg-card border-2 border-ink rounded-xs space-y-1">
                 <p className="font-display text-xl uppercase text-ink">— NO CLUBS FOUND —</p>
                 <p className="text-xs text-muted">
