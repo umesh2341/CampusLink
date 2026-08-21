@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Terminal, Send, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
-import { apiFetch } from '../../shared/lib/api';
+import { API_BASE } from '../../shared/lib/api';
 
 const CATEGORIES = [
   { id: 'general', label: 'General Announcement' },
@@ -50,8 +50,9 @@ function AddNoticeForm({ onBack, onSuccess, isCoAdmin }) {
       if (!payload.document_url.trim()) payload.document_url = null;
       if (!payload.expires_in_days) payload.expires_in_days = null;
       
-      const res = await apiFetch('/api/notices', {
+      const res = await fetch(`${API_BASE}/api/notices`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       
