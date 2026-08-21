@@ -630,27 +630,31 @@ function App() {
       {/* ── Terminal Bottom Nav Bar ── */}
       <nav className="bg-card border-t-2 border-ink px-3 py-3 flex items-center justify-around z-30 select-none shrink-0">
         {currentView === 'map' && isOrganizer ? (
-          <button onClick={() => setCurrentView('add-event')}
-            className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
+          <motion.button onClick={() => setCurrentView('add-event')}
+            whileTap={{ y: 2 }}
+            className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
             <PlusCircle className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider">ADD</span>
-          </button>
+          </motion.button>
         ) : currentView === 'add-event' ? (
-          <button onClick={() => setCurrentView('map')}
-            className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
+          <motion.button onClick={() => setCurrentView('map')}
+            whileTap={{ y: 2 }}
+            className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
             <MapIcon className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider">MAP</span>
-          </button>
+          </motion.button>
         ) : null}
 
-        <button onClick={() => setIsFilterOpen(true)}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
+        <motion.button onClick={() => setIsFilterOpen(true)}
+          whileTap={{ y: 2 }}
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
           <SlidersHorizontal className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">FILTERS</span>
-        </button>
+        </motion.button>
 
-        <button onClick={async () => { const events = await fetchAllActiveEvents(); setAllActiveEvents(events); setIsAllEventsOpen(true); }}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all relative focus:outline-none py-0.5">
+        <motion.button onClick={async () => { const events = await fetchAllActiveEvents(); setAllActiveEvents(events); setIsAllEventsOpen(true); }}
+          whileTap={{ y: 2 }}
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all relative focus:outline-none py-0.5">
           <Calendar className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">EVENTS</span>
           <AnimatePresence>
@@ -667,25 +671,27 @@ function App() {
             </motion.span>
           )}
           </AnimatePresence>
-        </button>
+        </motion.button>
 
-        <button onClick={async () => {
+        <motion.button onClick={async () => {
           if (allActiveEvents.length === 0) {
             const evts = await fetchAllActiveEvents();
             setAllActiveEvents(evts);
           }
           setIsClubsOpen(true);
         }}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
+          whileTap={{ y: 2 }}
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
           <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>
-        </button>
+        </motion.button>
 
-        <button onClick={() => setIsProfileOpen(true)}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
+        <motion.button onClick={() => setIsProfileOpen(true)}
+          whileTap={{ y: 2 }}
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
           <User className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">PROFILE</span>
-        </button>
+        </motion.button>
       </nav>
 
       {/* Custom In-App Web Push Notification Prompt */}

@@ -8,8 +8,6 @@ function FeedbackModal({ isOpen, onClose }) {
   const [rating, setRating] = useState(5);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -23,7 +21,8 @@ function FeedbackModal({ isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+      {isOpen && (
+      <div key="feedback-modal" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -118,18 +117,20 @@ function FeedbackModal({ isOpen, onClose }) {
                 >
                   CANCEL
                 </button>
-                <button
+                <motion.button
                   type="submit"
-                  className="flex items-center gap-1.5 text-xs font-bold border-2 border-ink px-4 py-1.5 rounded-xs bg-signal text-ink shadow-hard hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all active:translate-y-[2px]"
+                  whileTap={{ y: 1 }}
+                  className="flex items-center gap-1.5 text-xs font-bold border-2 border-ink px-4 py-1.5 rounded-xs bg-signal text-ink shadow-hard hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>TRANSMIT</span>
-                </button>
+                </motion.button>
               </div>
             </form>
           )}
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }

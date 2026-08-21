@@ -1,9 +1,11 @@
 /* CampusLink Service Worker — Push Notifications + Offline Caching */
 
 const CACHE_NAME = 'campuslink-v1';
+const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  OFFLINE_URL,
   '/favicon.svg',
   '/icon.svg',
   '/icon-maskable.svg',
@@ -108,6 +110,12 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
+        }).catch(() => {
+          // Network failed and not in cache — serve offline page for navigation requests only
+          if (request.mode === 'navigate') {
+            return caches.match(OFFLINE_URL);
+          }
+          return new Response(null, { status: 503, statusText: 'Service Unavailable' });
         });
       })
     );

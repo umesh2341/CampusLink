@@ -3,16 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Calendar, Instagram, MessageSquare, ShieldCheck } from 'lucide-react';
 
 function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent }) {
-  if (!isOpen || !club) return null;
-
   // Filter events organized by this club (case-insensitive substring match)
-  const clubEvents = activeEvents.filter(
+  const clubEvents = club ? activeEvents.filter(
     (e) => e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase())
-  );
+  ) : [];
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+      {isOpen && club && (
+      <div key="club-card" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -211,6 +210,7 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }
