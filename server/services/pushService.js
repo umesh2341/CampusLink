@@ -21,14 +21,19 @@ export const dispatchEventPushNotification = async (event) => {
   }
 
   try {
-    // 1. Get organizing club info
+    // 1. Get organizing club info — resolve name to UUID for muting check
     let clubLogo = null;
     let clubName = event.organizing_club || 'Campus Club';
+    let eventClubId = null;
     
-    // Fix: organizing_club in events table stores the club NAME (text), not the ID (uuid)
+    // organizing_club in events table stores the club NAME (text), not the ID (uuid)
+    // We need the UUID to compare against muted_club_ids (which stores UUIDs)
     if (event.organizing_club) {
-      const { rows: clubRows } = await pool.query('SELECT logo_url FROM clubs WHERE name = $1', [event.organizing_club]);
-      if (clubRows.length > 0) clubLogo = clubRows[0].logo_url;
+      const { rows: clubRows } = await pool.query('SELECT id, logo_url FROM clubs WHERE name = $1', [event.organizing_club]);
+      if (clubRows.length > 0) {
+        clubLogo = clubRows[0].logo_url;
+        eventClubId = clubRows[0].id;
+      }
     }
 
     // 2. Query subscriptions joined with preferences
@@ -47,7 +52,8 @@ export const dispatchEventPushNotification = async (event) => {
       // If there are no preferences, send it
       if (!sub.muted_club_ids && !sub.enabled_tags) return true;
 
-      const isMuted = Array.isArray(sub.muted_club_ids) && sub.muted_club_ids.includes(event.organizing_club);
+      // muted_club_ids stores UUIDs; compare against the resolved club UUID (not the text name)
+      const isMuted = Array.isArray(sub.muted_club_ids) && eventClubId && sub.muted_club_ids.includes(eventClubId);
       if (isMuted) return false;
 
       // If user enabled any of the event's tags, send it

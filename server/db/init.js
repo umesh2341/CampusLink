@@ -90,7 +90,32 @@ async function run() {
     `);
     console.log('Buildings table ensured.');
 
-    // Create events table
+    // Add columns that controllers query but may not exist on older schemas
+    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS slug VARCHAR(255);`);
+    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS entrance_x NUMERIC;`);
+    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS entrance_y NUMERIC;`);
+    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS description TEXT;`);
+    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS contact_info TEXT;`);
+    console.log('Buildings columns ensured.');
+
+    // Create clubs table BEFORE events (events.club_id references clubs.id)
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS clubs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL UNIQUE,
+        category VARCHAR(100),
+        description TEXT,
+        logo_url TEXT,
+        banner_url TEXT,
+        instagram VARCHAR(255),
+        discord VARCHAR(500),
+        lead_name VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('Clubs table ensured.');
+
+    // Create events table (after buildings and clubs exist for FKs)
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS events (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -105,11 +130,13 @@ async function run() {
         registration_url VARCHAR(1000),
         floor TEXT,
         room_number TEXT,
+        tags TEXT[] DEFAULT '{}',
         is_approved BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       )
     `);
     await dbClient.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;`);
+    await dbClient.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`);
     // Create departments table
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS departments (
@@ -138,6 +165,67 @@ async function run() {
       )
     `);
     console.log('Notices table ensured.');
+
+    // Create push_subscriptions table (required for push notifications)
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        endpoint      TEXT NOT NULL UNIQUE,
+        p256dh_key    TEXT NOT NULL,
+        auth_key      TEXT NOT NULL,
+        created_at    TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+    console.log('Push subscriptions table ensured.');
+
+    // Create subscription_preferences table (requires push_subscriptions)
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS subscription_preferences (
+        subscription_id  UUID PRIMARY KEY REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+        muted_club_ids   UUID[] DEFAULT '{}',
+        enabled_tags     TEXT[] DEFAULT ARRAY['hackathon','tech_event','workshop','cultural_event','college_official'],
+        updated_at       TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+    console.log('Subscription preferences table ensured.');
+
+    // Create profiles table (required for auth and location tracking)
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS profiles (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email       VARCHAR(255) UNIQUE,
+        name        VARCHAR(255) NOT NULL,
+        role        VARCHAR(50) DEFAULT 'student' NOT NULL,
+        created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )
+    `);
+    // Seed a default student profile for development/testing
+    await dbClient.query(`
+      INSERT INTO profiles (id, email, name, role)
+      VALUES ('11111111-2222-3333-4444-555555555555', 'student@iter.soa.ac.in', 'John Doe', 'student')
+      ON CONFLICT (id) DO NOTHING;
+    `);
+    console.log('Profiles table ensured.');
+
+    // Create user_locations table (requires profiles)
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS user_locations (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id     UUID NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+        latitude    NUMERIC(10, 7) NOT NULL,
+        longitude   NUMERIC(10, 7) NOT NULL,
+        accuracy    NUMERIC(8, 2),
+        altitude    NUMERIC(8, 2),
+        heading     NUMERIC(6, 2),
+        speed       NUMERIC(6, 2),
+        is_active   BOOLEAN DEFAULT TRUE NOT NULL,
+        updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_user_locations_user_id ON user_locations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_locations_updated_at ON user_locations(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_user_locations_active ON user_locations(is_active) WHERE is_active = TRUE;
+    `);
+    console.log('User locations table and indexes ensured.');
 
     // Seed buildings
     console.log('Seeding buildings data...');
