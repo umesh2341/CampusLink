@@ -28,9 +28,8 @@ export async function subscribeUserToPush() {
     throw new Error('Notification permission denied by user.');
   }
 
-  // Register service worker
-  const registration = await navigator.serviceWorker.register('/sw.js');
-  await navigator.serviceWorker.ready;
+  // Wait for the service worker registered by vite-plugin-pwa to be ready
+  const registration = await navigator.serviceWorker.ready;
 
   // Fetch VAPID public key from backend
   const keyRes = await fetch(`${API_BASE}/api/push/vapid-public-key`);

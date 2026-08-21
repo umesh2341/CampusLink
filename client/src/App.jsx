@@ -29,6 +29,7 @@ import FeedbackModal from './shared/components/FeedbackModal';
 import LocationConsentModal from './features/map/LocationConsentModal';
 import NoticeBanner from './features/notices/NoticeBanner';
 import NoticeBoardModal from './features/notices/NoticeBoardModal';
+import UpdatePrompt from './shared/components/UpdatePrompt';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 const AddNoticeForm = lazy(() => import('./features/notices/AddNoticeForm'));
@@ -620,15 +621,18 @@ function App() {
       )}
       </AnimatePresence>
 
+      {/* ── PWA Update Prompt ── */}
+      <UpdatePrompt />
+
       {/* ── Terminal Bottom Nav Bar ── */}
       <nav className="bg-card border-t-2 border-ink px-3 py-3 flex items-center justify-around z-30 select-none shrink-0">
         {currentView === 'map' && isOrganizer ? (
-          <button onClick={() => setCurrentView('add-event')}
+          <button onClick={() => setCurrentView('addEvent')}
             className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
             <PlusCircle className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider">ADD</span>
           </button>
-        ) : currentView === 'add-event' ? (
+        ) : currentView === 'addEvent' ? (
           <button onClick={() => setCurrentView('map')}
             className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
             <MapIcon className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
