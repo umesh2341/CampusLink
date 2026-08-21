@@ -133,6 +133,7 @@ async function run() {
         body TEXT NOT NULL,
         published_at TIMESTAMPTZ DEFAULT NOW(),
         expires_at TIMESTAMPTZ,
+        document_url TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);

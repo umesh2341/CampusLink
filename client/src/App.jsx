@@ -31,6 +31,7 @@ import NoticeBanner from './features/notices/NoticeBanner';
 import NoticeBoardModal from './features/notices/NoticeBoardModal';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
+const AddNoticeForm = lazy(() => import('./features/notices/AddNoticeForm'));
 import {
   User,
   Calendar,
@@ -72,6 +73,7 @@ function App() {
   const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false);
   const [isFeedbackOpen,      setIsFeedbackOpen]      = useState(false);
   const [isOrganizer,         setIsOrganizer]         = useState(true);
+  const [isCoAdmin,           setIsCoAdmin]           = useState(true);
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
   const [isNoticeBannerDismissed, setIsNoticeBannerDismissed] = useState(
     () => sessionStorage.getItem('notices_dismissed') === 'true'
@@ -411,7 +413,7 @@ function App() {
             lastViewedMap={lastViewedMap}
             userLocation={userLocation}
           />
-        ) : (
+        ) : currentView === 'addEvent' ? (
           <Suspense fallback={
             <div className="flex-1 flex items-center justify-center p-6 text-center font-mono text-xs text-muted uppercase">— LOADING FORM…</div>
           }>
@@ -422,7 +424,19 @@ function App() {
               onSuccess={handleEventSubmitSuccess}
             />
           </Suspense>
-        )}
+        ) : currentView === 'addNotice' ? (
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center p-6 text-center font-mono text-xs text-muted uppercase">— LOADING FORM…</div>
+          }>
+            <AddNoticeForm
+              isCoAdmin={isCoAdmin}
+              onBack={() => setCurrentView('map')}
+              onSuccess={() => {
+                queryClient.invalidateQueries(['notices']);
+              }}
+            />
+          </Suspense>
+        ) : null}
 
         {/* Slide-in Navigation Menu Drawer */}
         <NavMenuDrawer
@@ -431,7 +445,12 @@ function App() {
           onOpenNotifications={() => setIsNotificationsOpen(true)}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
           onOpenAbout={() => setIsAboutOpen(true)}
+          onOpenAddNotice={() => {
+            setIsNavMenuOpen(false);
+            setCurrentView('addNotice');
+          }}
           isOrganizer={isOrganizer}
+          isCoAdmin={isCoAdmin}
         />
       </main>
 

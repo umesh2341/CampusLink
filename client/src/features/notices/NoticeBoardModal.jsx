@@ -46,27 +46,38 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
                 — NO ACTIVE NOTICES —
               </p>
             ) : (
-              notices.map((notice) => (
-                <div
-                  key={notice.id}
-                  className="p-4 bg-paper border-2 border-ink rounded-xs shadow-hard"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-signal text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0">
-                      {notice.category}
-                    </span>
-                    <span className="text-[10px] text-muted font-bold uppercase truncate">
-                      {new Date(notice.published_at).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
+              notices.map((notice) => {
+                const hasDoc = !!notice.document_url;
+                return (
+                  <div
+                    key={notice.id}
+                    onClick={() => hasDoc && window.open(notice.document_url, '_blank')}
+                    className={`p-4 bg-paper border-2 border-ink rounded-xs shadow-hard ${
+                      hasDoc ? 'cursor-pointer hover:bg-card active:translate-y-[1px] transition-all' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-signal text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0">
+                        {notice.category}
+                      </span>
+                      <span className="text-[10px] text-muted font-bold uppercase truncate">
+                        {new Date(notice.published_at).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <h4 className="font-display text-lg uppercase text-ink leading-tight mb-2 flex items-center justify-between">
+                      <span>{notice.title}</span>
+                      {hasDoc && (
+                        <span className="text-[9px] font-mono tracking-widest text-signal border border-signal px-1 py-0.5 rounded-xs">
+                          VIEW PDF
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-xs text-ink leading-relaxed">
+                      {notice.body}
+                    </p>
                   </div>
-                  <h4 className="font-display text-lg uppercase text-ink leading-tight mb-2">
-                    {notice.title}
-                  </h4>
-                  <p className="text-xs text-ink leading-relaxed">
-                    {notice.body}
-                  </p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
