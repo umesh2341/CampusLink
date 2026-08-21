@@ -38,14 +38,14 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+      <div className="absolute inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+          className="absolute inset-0 bg-ink/40 backdrop-blur-xs"
           onClick={onClose}
         />
 
@@ -55,7 +55,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative z-50 w-full max-w-md sm:max-w-xl bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col max-h-[88vh] overflow-hidden"
+          className="relative z-50 w-full max-w-md sm:max-w-xl bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col h-full max-h-full overflow-hidden"
         >
           {/* Kiosk Header */}
           <div className="bg-ink text-paper px-4 py-2.5 flex items-center justify-between shrink-0">

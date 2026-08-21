@@ -7,14 +7,14 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono select-none">
+      <div className="absolute inset-0 z-50 flex items-center justify-center p-4 font-mono select-none">
         <motion.div
           key="noticeboard-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+          className="absolute inset-0 bg-ink/40 backdrop-blur-xs"
           onClick={onClose}
         />
         <motion.div
@@ -23,7 +23,7 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-card border-2 border-ink shadow-hard-xl rounded-xs w-full max-w-lg relative z-50 flex flex-col max-h-[85vh] overflow-hidden"
+          className="bg-card border-2 border-ink shadow-hard-xl rounded-xs w-full max-w-lg h-full max-h-full relative z-50 flex flex-col overflow-hidden"
         >
           {/* Header */}
           <div className="bg-ink text-paper px-4 py-3 flex items-center justify-between shrink-0">

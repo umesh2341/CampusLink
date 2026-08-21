@@ -452,34 +452,34 @@ function App() {
           isOrganizer={isOrganizer}
           isCoAdmin={isCoAdmin}
         />
+
+        {/* ── Constrained Modals (inside main) ── */}
+        <NoticeBoardModal
+          isOpen={isNoticeBoardOpen}
+          onClose={() => setIsNoticeBoardOpen(false)}
+          notices={notices}
+        />
+
+        <ClubsDirectoryModal
+          isOpen={isClubsOpen}
+          onClose={() => setIsClubsOpen(false)}
+          clubs={clubs}
+          activeEvents={allActiveEvents}
+          isLoading={isClubsLoading}
+          onSelectClub={(club) => {
+            setSelectedClub(club);
+            setIsClubDetailOpen(true);
+          }}
+        />
       </main>
 
-      {/* ── Sheets & Modals ── */}
-      <NoticeBoardModal
-        isOpen={isNoticeBoardOpen}
-        onClose={() => setIsNoticeBoardOpen(false)}
-        notices={notices}
-      />
-
+      {/* ── Sheets & Modals (Outside main, can cover header/nav if fixed) ── */}
       <SidePanel
         building={selectedBuilding}
         events={buildingEvents}
         isOpen={isSidePanelOpen}
         onClose={closeSidePanel}
         onSelectEvent={handleSelectEvent}
-      />
-
-      {/* ── Clubs Directory Modal ── */}
-      <ClubsDirectoryModal
-        isOpen={isClubsOpen}
-        onClose={() => setIsClubsOpen(false)}
-        clubs={clubs}
-        activeEvents={allActiveEvents}
-        isLoading={isClubsLoading}
-        onSelectClub={(club) => {
-          setSelectedClub(club);
-          setIsClubDetailOpen(true);
-        }}
       />
 
       {/* ── Club Detail Card Modal ── */}
