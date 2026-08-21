@@ -99,6 +99,7 @@ async function run() {
         start_time TIMESTAMP WITH TIME ZONE NOT NULL,
         end_time TIMESTAMP WITH TIME ZONE NOT NULL,
         building_id UUID REFERENCES buildings(id) ON DELETE CASCADE NOT NULL,
+        club_id UUID REFERENCES clubs(id) ON DELETE SET NULL,
         organizing_club VARCHAR(255) NOT NULL,
         image_url VARCHAR(1000),
         registration_url VARCHAR(1000),
@@ -122,6 +123,20 @@ async function run() {
       )
     `);
     console.log('Departments table ensured.');
+
+    // Create notices table
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS notices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        body TEXT NOT NULL,
+        published_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('Notices table ensured.');
 
     // Seed buildings
     console.log('Seeding buildings data...');

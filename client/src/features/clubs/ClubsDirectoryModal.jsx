@@ -4,7 +4,7 @@ import { X, Users, Search, ChevronRight, Sparkles, Filter } from 'lucide-react';
 
 const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY'];
 
-function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub }) {
+function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub, isLoading }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -115,9 +115,15 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
             </div>
           </div>
 
-          {/* Clubs Grid List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-grain">
-            {filteredClubs.length === 0 ? (
+          {/* Scrollable Body / Grid */}
+          <div className="flex-1 overflow-y-auto bg-grain p-4 space-y-2">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-signal">
+                <span className="font-mono text-sm font-bold tracking-widest uppercase animate-pulse">
+                  [ LOADING CLUBS... ]
+                </span>
+              </div>
+            ) : filteredClubs.length === 0 ? (
               <div className="p-8 text-center bg-card border-2 border-ink rounded-xs space-y-1">
                 <p className="font-display text-xl uppercase text-ink">— NO CLUBS FOUND —</p>
                 <p className="text-xs text-muted">

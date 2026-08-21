@@ -5,9 +5,9 @@ import { X, Users, Calendar, Instagram, MessageSquare, ShieldCheck } from 'lucid
 function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent }) {
   if (!isOpen || !club) return null;
 
-  // Filter events organized by this club (case-insensitive substring match)
+  // Filter events organized by this club (by club_id, falling back to name match for old events)
   const clubEvents = activeEvents.filter(
-    (e) => e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase())
+    (e) => e.club_id === club.id || (e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase()))
   );
 
   return (

@@ -9,6 +9,7 @@ import {
   fetchBuildings,
   fetchBuildingEvents,
   fetchClubs,
+  fetchNotices,
   updateUserLocation,
   stopUserLocationSharing,
   API_BASE,
@@ -26,13 +27,14 @@ import ClubsDirectoryModal from './features/clubs/ClubsDirectoryModal';
 import ClubCardModal from './features/clubs/ClubCardModal';
 import FeedbackModal from './shared/components/FeedbackModal';
 import LocationConsentModal from './features/map/LocationConsentModal';
+import NoticeBanner from './features/notices/NoticeBanner';
+import NoticeBoardModal from './features/notices/NoticeBoardModal';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 import {
   User,
   Calendar,
   Info,
-  SlidersHorizontal,
   Menu,
   X,
   Bell,
@@ -41,6 +43,7 @@ import {
   UserCheck,
   Users,
   Navigation,
+  ClipboardList
 } from 'lucide-react';
 
 function App() {
@@ -57,16 +60,12 @@ function App() {
   // ── Local UI state (not shared across layers) ──────────────
   const [selectedEvent,        setSelectedEvent]        = useState(null);
   const [isEventModalOpen,     setIsEventModalOpen]     = useState(false);
-  const [activeFilters, setActiveFilters] = useState({
-    academic: true, hostel_boys: true, hostel_girls: true,
-    admin: true, cafeteria: true, sports: true, gardens: true, other: true,
-  });
   const [currentView,         setCurrentView]         = useState('map');
   const [isNavMenuOpen,       setIsNavMenuOpen]       = useState(false);
   const [isProfileOpen,       setIsProfileOpen]       = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAboutOpen,         setIsAboutOpen]         = useState(false);
-  const [isFilterOpen,        setIsFilterOpen]        = useState(false);
+  const [isNoticeBoardOpen,   setIsNoticeBoardOpen]   = useState(false);
   const [isAllEventsOpen,     setIsAllEventsOpen]     = useState(false);
   const [isClubsOpen,         setIsClubsOpen]         = useState(false);
   const [selectedClub,        setSelectedClub]        = useState(null);
@@ -74,12 +73,15 @@ function App() {
   const [isFeedbackOpen,      setIsFeedbackOpen]      = useState(false);
   const [isOrganizer,         setIsOrganizer]         = useState(true);
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
+  const [isNoticeBannerDismissed, setIsNoticeBannerDismissed] = useState(
+    () => sessionStorage.getItem('notices_dismissed') === 'true'
+  );
 
-  // ── Live Location Tracker State ─────────────────────────────
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
   const [isLocationConsentOpen,setIsLocationConsentOpen]  = useState(false);
   const [locationError,        setLocationError]          = useState(null);
+  const [isEventsLoading,      setIsEventsLoading]        = useState(false);
 
   const watchIdRef = useRef(null);
   const lastSentPosRef = useRef(null);
@@ -99,10 +101,16 @@ function App() {
     staleTime: 60_000,
   });
 
-  const { data: clubs = [] } = useQuery({
+  const { data: clubs = [], isLoading: isClubsLoading } = useQuery({
     queryKey: ['clubs'],
     queryFn: fetchClubs,
     staleTime: 120_000,
+  });
+
+  const { data: notices = [] } = useQuery({
+    queryKey: ['notices'],
+    queryFn: fetchNotices,
+    staleTime: 60_000,
   });
 
   // Handle URL deep-linking for ?event_id=... (from Web Push Notification clicks)
@@ -165,11 +173,6 @@ function App() {
     [buildings]
   );
 
-  const filteredBuildings = useMemo(
-    () => buildings.filter(b => activeFilters[b.category]),
-    [buildings, activeFilters]
-  );
-
   /** Direct building click on map — highlight building AND open side panel */
   const handleSelectBuilding = (building) => selectBuilding(building);
 
@@ -185,10 +188,6 @@ function App() {
   const handleSelectEventFromSearch = (building, event) => {
     highlightBuilding(building);
     handleSelectEvent(event);
-  };
-
-  const toggleFilter = (category) => {
-    setActiveFilters(prev => ({ ...prev, [category]: !prev[category] }));
   };
 
   const handleEventSubmitSuccess = () => {
@@ -381,6 +380,16 @@ function App() {
 
       {/* ── Main Area ── */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-grain">
+        {!isNoticeBannerDismissed && notices.length > 0 && (
+          <NoticeBanner
+            notices={notices}
+            onOpenNotices={() => setIsNoticeBoardOpen(true)}
+            onClose={() => {
+              sessionStorage.setItem('notices_dismissed', 'true');
+              setIsNoticeBannerDismissed(true);
+            }}
+          />
+        )}
 
         {/* Floating Search Bar */}
         {currentView === 'map' && (
@@ -395,7 +404,7 @@ function App() {
 
         {currentView === 'map' ? (
           <InteractiveMap
-            buildings={filteredBuildings}
+            buildings={buildings}
             selectedBuilding={selectedBuilding}
             onSelectBuilding={handleSelectBuilding}
             activeEventsMap={activeEventsMap}
@@ -427,6 +436,11 @@ function App() {
       </main>
 
       {/* ── Sheets & Modals ── */}
+      <NoticeBoardModal
+        isOpen={isNoticeBoardOpen}
+        onClose={() => setIsNoticeBoardOpen(false)}
+        notices={notices}
+      />
 
       <SidePanel
         building={selectedBuilding}
@@ -436,18 +450,13 @@ function App() {
         onSelectEvent={handleSelectEvent}
       />
 
-      <EventDetailModal
-        event={selectedEvent}
-        isOpen={isEventModalOpen}
-        onClose={() => { setIsEventModalOpen(false); setSelectedEvent(null); }}
-      />
-
       {/* ── Clubs Directory Modal ── */}
       <ClubsDirectoryModal
         isOpen={isClubsOpen}
         onClose={() => setIsClubsOpen(false)}
         clubs={clubs}
         activeEvents={allActiveEvents}
+        isLoading={isClubsLoading}
         onSelectClub={(club) => {
           setSelectedClub(club);
           setIsClubDetailOpen(true);
@@ -464,6 +473,13 @@ function App() {
         }}
         activeEvents={allActiveEvents}
         onSelectEvent={handleSelectEvent}
+      />
+
+      {/* ── Event Detail Modal (Rendered last so it sits on top of other z-50 modals) ── */}
+      <EventDetailModal
+        event={selectedEvent}
+        isOpen={isEventModalOpen}
+        onClose={() => { setIsEventModalOpen(false); setSelectedEvent(null); }}
       />
 
       {/* ── Student Feedback Modal ── */}
@@ -538,54 +554,6 @@ function App() {
       )}
       </AnimatePresence>
 
-      {/* ── Filter Modal ── */}
-      <AnimatePresence>
-      {isFilterOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <motion.div key="filter-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsFilterOpen(false)} />
-          <motion.div key="filter-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
-            <div className="flex justify-between items-start border-b-2 border-ink pb-2">
-              <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ FILTERS ]</h3>
-              <button onClick={() => setIsFilterOpen(false)}
-                className="text-xs font-bold border-2 border-ink px-2 py-0.5 rounded-xs bg-paper hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]">
-                DONE
-              </button>
-            </div>
-            <div className="space-y-1">
-              {Object.keys(activeFilters).map(catKey => {
-                const colors = {
-                  academic:     'bg-category-academic-fill border-category-academic-border',
-                  hostel_boys:  'bg-category-boys-hostel-fill border-category-boys-hostel-border',
-                  hostel_girls: 'bg-category-girls-hostel-fill border-category-girls-hostel-border',
-                  admin:        'bg-category-admin-research-fill border-category-admin-research-border',
-                  cafeteria:    'bg-category-cafeteria-food-fill border-category-cafeteria-food-border',
-                  sports:       'bg-category-sports-fill border-category-sports-border',
-                  gardens:      'bg-category-gardens-fill border-category-gardens-border',
-                  other:        'bg-category-other-misc-fill border-category-other-misc-border',
-                };
-                const labels = {
-                  academic: 'ACADEMIC BLOCKS', hostel_boys: 'BOYS HOSTELS',
-                  hostel_girls: 'GIRLS HOSTELS', admin: 'ADMINISTRATION',
-                  cafeteria: 'CAFETERIA & FOOD', sports: 'SPORTS COMPLEXES',
-                  gardens: 'PARKS & GARDENS', other: 'OTHER UTILITY',
-                };
-                return (
-                  <label key={catKey} className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-xs hover:bg-paper border border-transparent hover:border-ink/20 rounded-xs">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-3 h-3 rounded-xs border ${colors[catKey]}`} />
-                      <span className="font-bold text-ink">{labels[catKey]}</span>
-                    </div>
-                    <input type="checkbox" checked={activeFilters[catKey]} onChange={() => toggleFilter(catKey)}
-                      className="w-4 h-4 accent-signal cursor-pointer" />
-                  </label>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-      )}
-      </AnimatePresence>
-
       {/* ── All Events Modal ── */}
       <AnimatePresence>
       {isAllEventsOpen && (
@@ -600,7 +568,13 @@ function App() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2.5">
-              {allActiveEvents.length === 0 ? (
+              {isEventsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 text-signal">
+                  <span className="font-mono text-sm font-bold tracking-widest uppercase animate-pulse">
+                    [ LOADING EVENTS... ]
+                  </span>
+                </div>
+              ) : allActiveEvents.length === 0 ? (
                 <p className="text-xs text-muted text-center py-8">— No active events on campus.</p>
               ) : (
                 allActiveEvents.map(event => (
@@ -643,13 +617,19 @@ function App() {
           </button>
         ) : null}
 
-        <button onClick={() => setIsFilterOpen(true)}
+        <button onClick={() => setIsNoticeBoardOpen(true)}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
-          <SlidersHorizontal className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wider">FILTERS</span>
+          <ClipboardList className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider">NOTICES</span>
         </button>
 
-        <button onClick={async () => { const events = await fetchAllActiveEvents(); setAllActiveEvents(events); setIsAllEventsOpen(true); }}
+        <button onClick={async () => { 
+            setIsAllEventsOpen(true); 
+            setIsEventsLoading(true);
+            const events = await fetchAllActiveEvents(); 
+            setAllActiveEvents(events); 
+            setIsEventsLoading(false);
+          }}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all relative focus:outline-none py-0.5">
           <Calendar className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">EVENTS</span>

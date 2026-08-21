@@ -24,6 +24,7 @@ export const getEventById = async (req, res) => {
         e.${evtReg} AS registration_url,
         e.floor,
         e.room_number,
+        e.club_id,
         e.${evtClub} AS organizing_club,
         e.is_approved,
         e.created_at,
@@ -53,6 +54,7 @@ export const createEvent = async (req, res) => {
     start_time,
     end_time,
     building_id,
+    club_id,
     organizing_club,
     image_url,
     registration_url,
@@ -63,7 +65,7 @@ export const createEvent = async (req, res) => {
   } = req.body;
 
   // Basic validation
-  if (!title || !description || !start_time || !end_time || !building_id || !organizing_club) {
+  if (!title || !description || !start_time || !end_time || !building_id || !club_id || !organizing_club) {
     return res.status(400).json({ error: 'Missing required event fields' });
   }
 
@@ -91,9 +93,9 @@ export const createEvent = async (req, res) => {
     const query = `
       INSERT INTO events (
         title, description, start_time, end_time, building_id, 
-        ${evtClub}, image_url, ${evtReg}, floor, room_number, tags, is_approved
+        club_id, ${evtClub}, image_url, ${evtReg}, floor, room_number, tags, is_approved
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *, ${evtClub} AS organizing_club, ${evtReg} AS registration_url;
     `;
     const { rows } = await pool.query(query, [
@@ -102,6 +104,7 @@ export const createEvent = async (req, res) => {
       start_time,
       end_time,
       resolvedBuildingId,
+      club_id,
       organizing_club,
       image_url || null,
       registration_url || null,

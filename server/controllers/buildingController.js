@@ -45,12 +45,15 @@ export const getBuildings = async (req, res) => {
   try {
     const schema = await detectSchema();
     const bldCat = schema.buildings.category;
+    const evtApprovedCond = schema.events.has_status 
+      ? `(e.is_approved = TRUE OR e.status = 'approved')` 
+      : `e.is_approved = TRUE`;
 
     const query = `
       SELECT b.id, b.svg_element_id, b.name, b.${bldCat} AS category, b.${bldCat} AS type,
              b.slug, b.entrance_x, b.entrance_y, b.description, b.contact_info, b.created_at,
-             COALESCE(COUNT(e.id) FILTER (WHERE e.is_approved = TRUE AND e.end_time >= NOW()), 0)::INTEGER AS active_event_count,
-             MAX(e.created_at) FILTER (WHERE e.is_approved = TRUE AND e.end_time >= NOW()) AS latest_event_created_at
+             COALESCE(COUNT(e.id) FILTER (WHERE ${evtApprovedCond} AND e.end_time >= NOW()), 0)::INTEGER AS active_event_count,
+             MAX(e.created_at) FILTER (WHERE ${evtApprovedCond} AND e.end_time >= NOW()) AS latest_event_created_at
       FROM buildings b
       LEFT JOIN events e ON b.id = e.building_id
       GROUP BY b.id
@@ -82,7 +85,7 @@ export const getBuildingEvents = async (req, res) => {
     const query = `
       SELECT id, title, description, start_time, end_time, building_id, 
              image_url, ${evtReg} AS registration_url, floor, room_number, 
-             tags, is_approved, ${evtClub} AS organizing_club
+             tags, is_approved, club_id, ${evtClub} AS organizing_club
       FROM events
       WHERE building_id = $1 AND ${evtApprovedCond} AND end_time >= NOW()
       ORDER BY start_time ASC;
