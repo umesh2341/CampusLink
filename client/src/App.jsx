@@ -25,6 +25,7 @@ import NotificationPreferencesModal from './features/notifications/NotificationP
 import NavMenuDrawer from './shared/components/NavMenuDrawer';
 import ClubsDirectoryModal from './features/clubs/ClubsDirectoryModal';
 import ClubCardModal from './features/clubs/ClubCardModal';
+import AllEventsModal from './features/events/AllEventsModal';
 import FeedbackModal from './shared/components/FeedbackModal';
 import LocationConsentModal from './features/map/LocationConsentModal';
 import NoticeBanner from './features/notices/NoticeBanner';
@@ -51,28 +52,21 @@ import {
 function App() {
   const queryClient = useQueryClient();
 
-  // ── Zustand store — building selection, panel, seen/unseen ──
+  // ── Zustand store — building selection, panel, seen/unseen, overlays ──
   const selectedBuilding  = useAppStore(s => s.selectedBuilding);
-  const isSidePanelOpen   = useAppStore(s => s.isSidePanelOpen);
+  const activeOverlay     = useAppStore(s => s.activeOverlay);
+  const switchOverlay     = useAppStore(s => s.switchOverlay);
+  const closeOverlay      = useAppStore(s => s.closeOverlay);
   const lastViewedMap     = useAppStore(s => s.lastViewedMap);
   const selectBuilding    = useAppStore(s => s.selectBuilding);
   const highlightBuilding = useAppStore(s => s.highlightBuilding);
-  const closeSidePanel    = useAppStore(s => s.closeSidePanel);
 
   // ── Local UI state (not shared across layers) ──────────────
   const [selectedEvent,        setSelectedEvent]        = useState(null);
-  const [isEventModalOpen,     setIsEventModalOpen]     = useState(false);
+  const [isEventModalOpen,     setIsEventModalOpen]     = useState(false); // Can stack on top of directories
   const [currentView,         setCurrentView]         = useState('map');
-  const [isNavMenuOpen,       setIsNavMenuOpen]       = useState(false);
-  const [isProfileOpen,       setIsProfileOpen]       = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isAboutOpen,         setIsAboutOpen]         = useState(false);
-  const [isNoticeBoardOpen,   setIsNoticeBoardOpen]   = useState(false);
-  const [isAllEventsOpen,     setIsAllEventsOpen]     = useState(false);
-  const [isClubsOpen,         setIsClubsOpen]         = useState(false);
   const [selectedClub,        setSelectedClub]        = useState(null);
-  const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false);
-  const [isFeedbackOpen,      setIsFeedbackOpen]      = useState(false);
+  const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false); // Can stack on top of directories
   const [isOrganizer,         setIsOrganizer]         = useState(true);
   const [isCoAdmin,           setIsCoAdmin]           = useState(true);
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
@@ -82,7 +76,6 @@ function App() {
 
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
-  const [isLocationConsentOpen,setIsLocationConsentOpen]  = useState(false);
   const [locationError,        setLocationError]          = useState(null);
   const [isEventsLoading,      setIsEventsLoading]        = useState(false);
 
@@ -313,6 +306,15 @@ function App() {
     );
   };
 
+  const handleSwitchView = (view) => {
+    if (activeOverlay) {
+      closeOverlay();
+      setTimeout(() => setCurrentView(view), 200);
+    } else {
+      setCurrentView(view);
+    }
+  };
+
   // Cleanup geolocation watcher on component unmount
   useEffect(() => {
     return () => {
@@ -365,13 +367,13 @@ function App() {
             </span>
           )}
           <button
-            onClick={() => setIsNavMenuOpen(prev => !prev)}
-            aria-label={isNavMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            title={isNavMenuOpen ? "Close menu" : "Open menu"}
+            onClick={() => activeOverlay === 'NAV_MENU' ? closeOverlay() : switchOverlay('NAV_MENU')}
+            aria-label={activeOverlay === 'NAV_MENU' ? "Close navigation menu" : "Open navigation menu"}
+            title={activeOverlay === 'NAV_MENU' ? "Close menu" : "Open menu"}
             className="p-1.5 border border-transparent hover:border-ink hover:bg-paper text-ink rounded-xs transition-all focus:outline-none active:translate-y-[1px] relative z-50"
           >
             <div className="w-5 h-5 flex items-center justify-center relative">
-              {isNavMenuOpen ? (
+              {activeOverlay === 'NAV_MENU' ? (
                 <X className="w-5 h-5 text-ink transition-transform duration-300 rotate-90" />
               ) : (
                 <Menu className="w-5 h-5 text-ink transition-transform duration-300 rotate-0" />
@@ -386,7 +388,7 @@ function App() {
         {!isNoticeBannerDismissed && notices.length > 0 && (
           <NoticeBanner
             notices={notices}
-            onOpenNotices={() => setIsNoticeBoardOpen(true)}
+            onOpenNotices={() => switchOverlay('NOTICE_BOARD')}
             onClose={() => {
               sessionStorage.setItem('notices_dismissed', 'true');
               setIsNoticeBannerDismissed(true);
@@ -441,14 +443,13 @@ function App() {
 
         {/* Slide-in Navigation Menu Drawer */}
         <NavMenuDrawer
-          isOpen={isNavMenuOpen}
-          onClose={() => setIsNavMenuOpen(false)}
-          onOpenNotifications={() => setIsNotificationsOpen(true)}
-          onOpenFeedback={() => setIsFeedbackOpen(true)}
-          onOpenAbout={() => setIsAboutOpen(true)}
+          isOpen={activeOverlay === 'NAV_MENU'}
+          onClose={closeOverlay}
+          onOpenNotifications={() => switchOverlay('NOTIFICATIONS')}
+          onOpenFeedback={() => switchOverlay('FEEDBACK')}
+          onOpenAbout={() => switchOverlay('ABOUT')}
           onOpenAddNotice={() => {
-            setIsNavMenuOpen(false);
-            setCurrentView('addNotice');
+            handleSwitchView('addNotice');
           }}
           isOrganizer={isOrganizer}
           isCoAdmin={isCoAdmin}
@@ -456,14 +457,14 @@ function App() {
 
         {/* ── Constrained Modals (inside main) ── */}
         <NoticeBoardModal
-          isOpen={isNoticeBoardOpen}
-          onClose={() => setIsNoticeBoardOpen(false)}
+          isOpen={activeOverlay === 'NOTICE_BOARD'}
+          onClose={closeOverlay}
           notices={notices}
         />
 
         <ClubsDirectoryModal
-          isOpen={isClubsOpen}
-          onClose={() => setIsClubsOpen(false)}
+          isOpen={activeOverlay === 'CLUBS'}
+          onClose={closeOverlay}
           clubs={clubs}
           activeEvents={allActiveEvents}
           isLoading={isClubsLoading}
@@ -472,14 +473,58 @@ function App() {
             setIsClubDetailOpen(true);
           }}
         />
+
+        <AllEventsModal
+          isOpen={activeOverlay === 'ALL_EVENTS'}
+          onClose={closeOverlay}
+          allActiveEvents={allActiveEvents}
+          isEventsLoading={isEventsLoading}
+          onSelectEvent={handleSelectEvent}
+        />
+
+        {/* ── Profile Modal ── */}
+        <AnimatePresence>
+        {activeOverlay === 'PROFILE' && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 font-mono">
+            <motion.div key="profile-backdrop" className="absolute inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={closeOverlay} />
+            <motion.div key="profile-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
+              <div className="flex justify-between items-start border-b-2 border-ink pb-2">
+                <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ PROFILE ]</h3>
+                <button onClick={closeOverlay}
+                  className="text-xs font-bold border-2 border-ink px-2 py-0.5 rounded-xs bg-paper hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]">
+                  CLOSE
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xs bg-ink text-paper border-2 border-ink flex items-center justify-center font-display text-lg font-bold uppercase">
+                  JD
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-ink uppercase">JOHN DOE</h4>
+                  <span className="text-xs text-muted">JUNIOR, B.TECH CSE</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t-2 border-ink/10 pt-3">
+                <div>
+                  <span className="text-xs font-bold text-ink block uppercase">ORGANIZER ACCESS</span>
+                  <span className="text-[10px] text-muted">— simulate authorization</span>
+                </div>
+                <input type="checkbox" checked={isOrganizer} onChange={(e) => setIsOrganizer(e.target.checked)}
+                  className="w-4 h-4 accent-signal cursor-pointer" />
+              </div>
+            </motion.div>
+          </div>
+        )}
+        </AnimatePresence>
+
       </main>
 
       {/* ── Sheets & Modals (Outside main, can cover header/nav if fixed) ── */}
       <SidePanel
         building={selectedBuilding}
         events={buildingEvents}
-        isOpen={isSidePanelOpen}
-        onClose={closeSidePanel}
+        isOpen={activeOverlay === 'SIDE_PANEL'}
+        onClose={closeOverlay}
         onSelectEvent={handleSelectEvent}
       />
 
@@ -504,62 +549,29 @@ function App() {
 
       {/* ── Student Feedback Modal ── */}
       <FeedbackModal
-        isOpen={isFeedbackOpen}
-        onClose={() => setIsFeedbackOpen(false)}
+        isOpen={activeOverlay === 'FEEDBACK'}
+        onClose={closeOverlay}
       />
 
       {/* ── Live Location Consent & Privacy Modal ── */}
       <LocationConsentModal
-        isOpen={isLocationConsentOpen}
-        onClose={() => setIsLocationConsentOpen(false)}
+        isOpen={activeOverlay === 'LOCATION_CONSENT'}
+        onClose={closeOverlay}
         onConfirm={startTrackingAfterConsent}
         error={locationError}
       />
 
-      {/* ── Profile Modal ── */}
-      <AnimatePresence>
-      {isProfileOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <motion.div key="profile-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsProfileOpen(false)} />
-          <motion.div key="profile-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-sm relative z-50 space-y-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
-            <div className="flex justify-between items-start border-b-2 border-ink pb-2">
-              <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ PROFILE ]</h3>
-              <button onClick={() => setIsProfileOpen(false)}
-                className="text-xs font-bold border-2 border-ink px-2 py-0.5 rounded-xs bg-paper hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]">
-                CLOSE
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xs bg-ink text-paper border-2 border-ink flex items-center justify-center font-display text-lg font-bold uppercase">
-                JD
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-ink uppercase">JOHN DOE</h4>
-                <span className="text-xs text-muted">JUNIOR, B.TECH CSE</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between border-t-2 border-ink/10 pt-3">
-              <div>
-                <span className="text-xs font-bold text-ink block uppercase">ORGANIZER ACCESS</span>
-                <span className="text-[10px] text-muted">— simulate authorization</span>
-              </div>
-              <input type="checkbox" checked={isOrganizer} onChange={(e) => setIsOrganizer(e.target.checked)}
-                className="w-4 h-4 accent-signal cursor-pointer" />
-            </div>
-          </motion.div>
-        </div>
-      )}
-      </AnimatePresence>
+
 
       {/* ── About Modal ── */}
       <AnimatePresence>
-      {isAboutOpen && (
+      {activeOverlay === 'ABOUT' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <motion.div key="about-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsAboutOpen(false)} />
+          <motion.div key="about-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={closeOverlay} />
           <motion.div key="about-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 space-y-3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
             <div className="flex justify-between items-start border-b-2 border-ink pb-2">
               <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ ABOUT ]</h3>
-              <button onClick={() => setIsAboutOpen(false)}
+              <button onClick={closeOverlay}
                 className="text-xs font-bold border-2 border-ink px-2 py-0.5 rounded-xs bg-paper hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]">
                 CLOSE
               </button>
@@ -574,52 +586,7 @@ function App() {
       )}
       </AnimatePresence>
 
-      {/* ── All Events Modal ── */}
-      <AnimatePresence>
-      {isAllEventsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono">
-          <motion.div key="events-backdrop" className="fixed inset-0 bg-ink/40 backdrop-blur-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setIsAllEventsOpen(false)} />
-          <motion.div key="events-card" className="bg-card border-2 border-ink shadow-hard-xl rounded-xs p-5 w-full max-w-md relative z-50 flex flex-col max-h-[80vh]" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ type: 'tween', duration: 0.2 }}>
-            <div className="flex justify-between items-start border-b-2 border-ink pb-2 mb-3 shrink-0">
-              <h3 className="text-2xl font-display uppercase tracking-tight text-ink">[ ALL EVENTS ]</h3>
-              <button onClick={() => setIsAllEventsOpen(false)}
-                className="text-xs font-bold border-2 border-ink px-2 py-0.5 rounded-xs bg-paper hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]">
-                CLOSE
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2.5">
-              {isEventsLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3 text-signal">
-                  <span className="font-mono text-sm font-bold tracking-widest uppercase animate-pulse">
-                    [ LOADING EVENTS... ]
-                  </span>
-                </div>
-              ) : allActiveEvents.length === 0 ? (
-                <p className="text-xs text-muted text-center py-8">— No active events on campus.</p>
-              ) : (
-                allActiveEvents.map(event => (
-                  <div
-                    key={event.id}
-                    onClick={() => { setIsAllEventsOpen(false); handleSelectEvent(event); }}
-                    className="p-3 border-2 border-ink rounded-xs bg-card shadow-hard cursor-pointer
-                               hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none
-                               active:translate-y-[2px] transition-all"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-display text-lg uppercase text-ink">{event.title}</h4>
-                      <span className="text-[9px] font-bold bg-signal text-ink border border-ink px-1 py-0.5 rounded-xs shrink-0">PASS</span>
-                    </div>
-                    <span className="text-[10px] text-muted block mt-0.5">
-                      CLUB: <strong className="text-ink">{event.organizing_club}</strong>
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
-      </AnimatePresence>
+
 
       {/* ── PWA Update Prompt ── */}
       <UpdatePrompt />
@@ -627,27 +594,27 @@ function App() {
       {/* ── Terminal Bottom Nav Bar ── */}
       <nav className="bg-card border-t-2 border-ink px-3 py-3 flex items-center justify-around z-30 select-none shrink-0">
         {currentView === 'map' && isOrganizer ? (
-          <button onClick={() => setCurrentView('addEvent')}
+          <button onClick={() => handleSwitchView('addEvent')}
             className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
             <PlusCircle className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider">ADD</span>
           </button>
         ) : currentView === 'addEvent' ? (
-          <button onClick={() => setCurrentView('map')}
+          <button onClick={() => handleSwitchView('map')}
             className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
             <MapIcon className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider">MAP</span>
           </button>
         ) : null}
 
-        <button onClick={() => setIsNoticeBoardOpen(true)}
+        <button onClick={() => switchOverlay('NOTICE_BOARD')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <ClipboardList className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">NOTICES</span>
         </button>
 
         <button onClick={async () => { 
-            setIsAllEventsOpen(true); 
+            switchOverlay('ALL_EVENTS'); 
             setIsEventsLoading(true);
             const events = await fetchAllActiveEvents(); 
             setAllActiveEvents(events); 
@@ -677,14 +644,14 @@ function App() {
             const evts = await fetchAllActiveEvents();
             setAllActiveEvents(evts);
           }
-          setIsClubsOpen(true);
+          switchOverlay('CLUBS');
         }}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>
         </button>
 
-        <button onClick={() => setIsProfileOpen(true)}
+        <button onClick={() => switchOverlay('PROFILE')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <User className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">PROFILE</span>
@@ -696,8 +663,8 @@ function App() {
 
       {/* Notifications Preferences Modal */}
       <NotificationPreferencesModal
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
+        isOpen={activeOverlay === 'NOTIFICATIONS'}
+        onClose={closeOverlay}
       />
 
     </div>

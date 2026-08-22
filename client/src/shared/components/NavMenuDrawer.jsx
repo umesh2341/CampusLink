@@ -95,16 +95,10 @@ function NavMenuDrawer({
             className="absolute inset-y-0 right-0 z-40 w-full max-w-xs sm:max-w-sm bg-paper border-l-2 border-ink shadow-hard-xl flex flex-col font-mono"
           >
             {/* Drawer Header Strip */}
-            <div className="bg-ink text-paper px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="bg-ink text-paper px-4 py-3 flex items-center justify-center shrink-0">
               <span className="text-xs uppercase tracking-widest font-bold">
                 [ TERMINAL MENU ]
               </span>
-              <button
-                onClick={onClose}
-                className="text-xs font-bold border border-paper px-2 py-0.5 rounded-xs bg-ink text-paper hover:bg-paper hover:text-ink transition-all active:translate-y-[1px]"
-              >
-                CLOSE
-              </button>
             </div>
 
             {/* Menu Items List */}

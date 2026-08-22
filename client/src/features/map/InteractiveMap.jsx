@@ -40,6 +40,11 @@ function InteractiveMap({
 
   const MAX_ZOOM = 3.5;
 
+  // These multipliers are applied to the initial 'fit to viewport' zoom level
+  // Adjust these to control how far users can zoom out on different devices
+  const MIN_ZOOM_MOBILE = 0.8;
+  const MIN_ZOOM_DESKTOP = 2.4;
+
   const getFitZoom = () => {
     if (!viewportRef.current) return 0.25;
     const vWidth = viewportRef.current.clientWidth;
@@ -53,9 +58,10 @@ function InteractiveMap({
 
   const getMinZoom = () => {
     const fitZoom = getFitZoom();
-    // Allow zooming out very slightly below the initial fit (5% smaller)
-    // to give a comfortable overview without exposing too much empty background.
-    return fitZoom * 2.4;
+    const isMobile = window.innerWidth < 768;
+    // Apply the responsive multiplier to give a comfortable overview 
+    // without exposing too much empty background.
+    return fitZoom * (isMobile ? MIN_ZOOM_MOBILE : MIN_ZOOM_DESKTOP);
   };
 
   const updateTransform = (newZoom, newPan) => {
