@@ -42,7 +42,7 @@ function InteractiveMap({
 
   // These multipliers are applied to the initial 'fit to viewport' zoom level
   // Adjust these to control how far users can zoom out on different devices
-  const MIN_ZOOM_MOBILE = 0.8;
+  const MIN_ZOOM_MOBILE = 0.86;
   const MIN_ZOOM_DESKTOP = 2.4;
 
   const getFitZoom = () => {
