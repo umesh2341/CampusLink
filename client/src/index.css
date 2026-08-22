@@ -58,6 +58,7 @@
 .map-perspective-tilt {
   transform: perspective(1000px) rotateX(19deg);
   transform-origin: top center;
+  will-change: transform;
 }
 
 #svg-map-wrapper svg {

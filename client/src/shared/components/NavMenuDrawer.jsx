@@ -112,12 +112,10 @@ function NavMenuDrawer({
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <motion.button
+                  <button
                     key={item.id}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
                     onClick={item.onClick}
-                    className="w-full text-left bg-card hover:bg-paper border-2 border-ink shadow-hard hover:shadow-hard-lg rounded-xs p-3 flex items-center justify-between group transition-all active:translate-x-[1px] active:translate-y-[1px] focus:outline-none cursor-pointer"
+                    className="w-full text-left bg-card hover:bg-paper border-2 border-ink shadow-hard hover:shadow-hard-lg rounded-xs p-3 flex items-center justify-between group transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] active:translate-x-[1px] active:translate-y-[1px] focus:outline-none cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xs bg-paper border-2 border-ink flex items-center justify-center group-hover:bg-signal group-hover:text-ink transition-colors shrink-0">
@@ -144,7 +142,7 @@ function NavMenuDrawer({
                     ) : (
                       <ChevronRight className="w-4 h-4 text-ink/40 group-hover:text-ink group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                     )}
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>

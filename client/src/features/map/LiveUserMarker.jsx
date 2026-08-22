@@ -1,5 +1,4 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 import { Navigation } from 'lucide-react';
 
 /**
@@ -8,7 +7,6 @@ import { Navigation } from 'lucide-react';
  * Designed in the CampusLink Terminal / Kiosk aesthetic:
  * - Sharp borders and high-visibility signal beacon
  * - Pulsing GPS accuracy zone
- * - Smooth spring physics on coordinate shifts
  */
 function LiveUserMarker({
   x,
@@ -18,19 +16,26 @@ function LiveUserMarker({
   heading = null,
   isInsideCampus = true,
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setMounted(true));
+    });
+    return () => cancelAnimationFrame(timer);
+  }, []);
+
   if (x === null || y === null) return null;
 
   const left = (x / 1580) * 100;
   const top = (y / 2891) * 100;
 
+  const scaleClass = mounted ? 'scale-100 opacity-100' : 'scale-0 opacity-0';
+
   return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0, opacity: 0 }}
-      transition={{ type: 'spring', damping: 20, stiffness: 280 }}
-      className="absolute -translate-x-1/2 -translate-y-1/2 z-35 pointer-events-none select-none"
-      style={{ left: `${left}%`, top: `${top}%` }}
+    <div
+      className={`absolute -translate-x-1/2 -translate-y-1/2 z-35 pointer-events-none select-none transition-all duration-300 ease-out ${scaleClass}`}
+      style={{ left: `${left}%`, top: `${top}%`, willChange: 'transform, opacity' }}
     >
       {/* Accuracy Uncertainty Halo */}
       <div
@@ -69,7 +74,7 @@ function LiveUserMarker({
           </span>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 

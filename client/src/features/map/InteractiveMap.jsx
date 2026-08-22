@@ -21,11 +21,11 @@ function InteractiveMap({
 
   // Read saved map transform state from Zustand store
   const savedZoom = useAppStore(s => s.mapZoom);
-  const savedPan  = useAppStore(s => s.mapPan);
+  const savedPan = useAppStore(s => s.mapPan);
   const setMapTransform = useAppStore(s => s.setMapTransform);
 
   const [zoom, setZoomState] = useState(() => savedZoom ?? 0.25);
-  const [pan, setPanState]   = useState(() => savedPan ?? { x: 0, y: 10 });
+  const [pan, setPanState] = useState(() => savedPan ?? { x: 0, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
 
@@ -39,10 +39,23 @@ function InteractiveMap({
   const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
 
   const MAX_ZOOM = 3.5;
-  const getMinZoom = () => {
+
+  const getFitZoom = () => {
     if (!viewportRef.current) return 0.25;
     const vWidth = viewportRef.current.clientWidth;
-    return Math.max(0.22, vWidth / 1580);
+    const vHeight = viewportRef.current.clientHeight;
+    // Calculate scale to fit width and height, handling the 3D tilt perspective distortion roughly
+    const scaleX = vWidth / 1580;
+    const scaleY = vHeight / 2891;
+    // Use the smaller scale so it fully contains within the viewport, with 5% padding
+    return Math.min(scaleX, scaleY) * 0.95;
+  };
+
+  const getMinZoom = () => {
+    const fitZoom = getFitZoom();
+    // Allow zooming out very slightly below the initial fit (5% smaller)
+    // to give a comfortable overview without exposing too much empty background.
+    return fitZoom * 2.4;
   };
 
   const updateTransform = (newZoom, newPan) => {
@@ -96,8 +109,16 @@ function InteractiveMap({
   // Initial sizing if no saved transform exists
   useEffect(() => {
     if (viewportRef.current && (savedZoom === null || savedPan === null)) {
-      const fitZoom = getMinZoom();
-      const initialPan = { x: 0, y: 70 };
+      const fitZoom = getFitZoom();
+      // Center the map initially
+      const vWidth = viewportRef.current.clientWidth;
+      const vHeight = viewportRef.current.clientHeight;
+      const mapWidth = 1580 * fitZoom;
+      const mapHeight = 2891 * fitZoom;
+      const initialPan = {
+        x: (vWidth - mapWidth) / 2,
+        y: (vHeight - mapHeight) / 2
+      };
       updateTransform(fitZoom, initialPan);
     }
   }, []);
@@ -327,15 +348,15 @@ function InteractiveMap({
         const ratio = currentDist / pinchStartDistRef.current;
         const minZ = getMinZoom();
         const targetZoom = Math.min(MAX_ZOOM, Math.max(minZ, pinchStartZoomRef.current * ratio));
-        
+
         const rect = viewportRef.current.getBoundingClientRect();
         const midX = pinchCenterRef.current.x - rect.left;
         const midY = pinchCenterRef.current.y - rect.top;
-        
+
         const scaleRatio = targetZoom / pinchStartZoomRef.current;
         const newPanX = midX - (midX - pinchStartPanRef.current.x) * scaleRatio;
         const newPanY = midY - (midY - pinchStartPanRef.current.y) * scaleRatio;
-        
+
         updateTransform(targetZoom, { x: newPanX, y: newPanY });
       }
     }
@@ -436,6 +457,7 @@ function InteractiveMap({
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transition: isInteracting || isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+            willChange: 'transform',
           }}
         >
           {/* Static SVG Map Layer */}
@@ -492,7 +514,7 @@ function InteractiveMap({
 
       {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
       <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">
-        
+
         {/* Live GPS Telemetry Pill (when tracking active) */}
         {userLocation && userLocation.x !== null && userLocation.y !== null && (
           <div className="bg-card border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
