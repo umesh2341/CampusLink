@@ -4,7 +4,35 @@
  * can cache, deduplicate, and retry them automatically.
  */
 
-export const API_BASE = import.meta.env.VITE_API_URL || '';
+export const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '' : 'https://campuslinks.onrender.com');
+
+/**
+ * Generate or retrieve a persistent anonymous RFC4122 UUID for the current device/tester.
+ * Ensures concurrent testers have distinct telemetry streams and profiles.
+ */
+export function getOrCreateDeviceId() {
+  const STORAGE_KEY = 'campuslink_device_uuid';
+  try {
+    let id = localStorage.getItem(STORAGE_KEY);
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        id = crypto.randomUUID();
+      } else {
+        id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      }
+      localStorage.setItem(STORAGE_KEY, id);
+    }
+    return id;
+  } catch {
+    return '11111111-2222-3333-4444-555555555555';
+  }
+}
 
 /** Fetch the full buildings list (with active_event_count and latest_event_created_at). */
 export async function fetchBuildings() {
@@ -44,8 +72,8 @@ export const fetchNotices = async () => {
 };
 
 /** Update user's current GPS location on backend */
-export async function updateUserLocation(locationData, userId = '11111111-2222-3333-4444-555555555555') {
-  const res = await fetch('/api/location', {
+export async function updateUserLocation(locationData, userId = getOrCreateDeviceId()) {
+  const res = await fetch(`${API_BASE}/api/location`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -58,8 +86,8 @@ export async function updateUserLocation(locationData, userId = '11111111-2222-3
 }
 
 /** Retrieve user's current stored location */
-export async function fetchUserLocation(userId = '11111111-2222-3333-4444-555555555555') {
-  const res = await fetch('/api/location/me', {
+export async function fetchUserLocation(userId = getOrCreateDeviceId()) {
+  const res = await fetch(`${API_BASE}/api/location/me`, {
     headers: {
       'x-user-id': userId,
     },
@@ -69,8 +97,8 @@ export async function fetchUserLocation(userId = '11111111-2222-3333-4444-555555
 }
 
 /** Stop location sharing on backend */
-export async function stopUserLocationSharing(userId = '11111111-2222-3333-4444-555555555555') {
-  const res = await fetch('/api/location/me', {
+export async function stopUserLocationSharing(userId = getOrCreateDeviceId()) {
+  const res = await fetch(`${API_BASE}/api/location/me`, {
     method: 'DELETE',
     headers: {
       'x-user-id': userId,
@@ -81,8 +109,8 @@ export async function stopUserLocationSharing(userId = '11111111-2222-3333-4444-
 }
 
 /** Retrieve active users sharing location on campus */
-export async function fetchActiveLocations(userId = '11111111-2222-3333-4444-555555555555') {
-  const res = await fetch('/api/location/active', {
+export async function fetchActiveLocations(userId = getOrCreateDeviceId()) {
+  const res = await fetch(`${API_BASE}/api/location/active`, {
     headers: {
       'x-user-id': userId,
     },
@@ -90,4 +118,3 @@ export async function fetchActiveLocations(userId = '11111111-2222-3333-4444-555
   if (!res.ok) throw new Error('Failed to fetch active campus locations');
   return res.json();
 }
-

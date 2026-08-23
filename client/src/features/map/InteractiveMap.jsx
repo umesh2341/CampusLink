@@ -258,6 +258,25 @@ function InteractiveMap({
     }
   }, [selectedBuilding]);
 
+  // Initial auto-centering on user position when live location is activated
+  const hasAutoCenteredUserRef = useRef(false);
+  useEffect(() => {
+    if (!userLocation || userLocation.x === null || userLocation.y === null) {
+      hasAutoCenteredUserRef.current = false;
+      return;
+    }
+    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding) {
+      hasAutoCenteredUserRef.current = true;
+      const vp = viewportRef.current;
+      const vpWidth = vp.clientWidth;
+      const vpHeight = vp.clientHeight;
+      const targetZoom = Math.min(MAX_ZOOM, Math.max(0.65, (vpWidth / 1580) * 1.5));
+      const newPanX = vpWidth / 2 - userLocation.x * targetZoom;
+      const newPanY = vpHeight / 2 - userLocation.y * targetZoom;
+      updateTransform(targetZoom, { x: newPanX, y: newPanY });
+    }
+  }, [userLocation, selectedBuilding]);
+
   // Desktop Mouse Drag Handlers
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;

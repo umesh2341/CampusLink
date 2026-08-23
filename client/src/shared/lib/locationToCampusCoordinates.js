@@ -3,65 +3,139 @@
  *
  * Mathematical Transformation Layer: WGS84 GPS (Latitude/Longitude) → Campus SVG (x, y)
  *
- * Employs a 2D Affine Transformation calibrated with 3 Ground Control Anchors (GCPs)
- * across ITER, SOA University campus to map real-world geolocation fixes onto
- * the fixed 1580px x 2891px SVG canvas.
+ * Employs a calibrated 2D Affine Transformation using multi-point Ground Control Anchors (GCPs)
+ * derived directly from OpenStreetMap landmark coordinates across ITER, SOA University campus to
+ * map real-world geolocation fixes accurately onto the fixed 1580px x 2891px SVG canvas.
  */
 
 // Ground Control Points (GCPs) for ITER, SOA University
 export const CAMPUS_GEO_CONFIG = {
   campusName: 'ITER, SOA University',
-  centerLat: 20.2520,
-  centerLng: 85.7985,
+  centerLat: 20.2485,
+  centerLng: 85.8010,
   svgWidth: 1580,
   svgHeight: 2891,
   
-  // Perimeter bounding box for campus validity checking
+  // Perimeter bounding box for campus validity checking (covering all blocks and North/South hostels)
   bounds: {
-    minLat: 20.2470,
-    maxLat: 20.2570,
-    minLng: 85.7930,
-    maxLng: 85.8035,
+    minLat: 20.2435,
+    maxLat: 20.2520,
+    minLng: 85.7975,
+    maxLng: 85.8045,
   },
 
-  // 3 Ground Control Anchors for Affine transformation matrix solving
+  // Calibrated Ground Control Anchors across North, Core Academic, and South Campus zones
   anchors: [
-    { name: 'LH5 (North Gate)', lat: 20.2548, lng: 85.7972, svgX: 676, svgY: 48 },
-    { name: 'Sports Complex / BH9 (South)', lat: 20.2492, lng: 85.8015, svgX: 1451, svgY: 2637 },
-    { name: 'D-Block (West Academic)', lat: 20.2521, lng: 85.7950, svgX: 321, svgY: 1266 },
+    { name: 'LH-5 (North Gate)', lat: 20.250620, lng: 85.801050, svgX: 676, svgY: 48 },
+    { name: 'BH-7 (North-West)', lat: 20.250403, lng: 85.800364, svgX: 389, svgY: 138 },
+    { name: 'BH-2 (North)', lat: 20.250319, lng: 85.800819, svgX: 590, svgY: 180 },
+    { name: 'BH-1 (North)', lat: 20.249985, lng: 85.800832, svgX: 572, svgY: 366 },
+    { name: 'Admin / Academic Block', lat: 20.249472, lng: 85.800603, svgX: 437, svgY: 650 },
+    { name: 'Centre for Data Science', lat: 20.249447, lng: 85.801393, svgX: 869, svgY: 614 },
+    { name: 'Futsal / Football Court 1', lat: 20.249177, lng: 85.801115, svgX: 709, svgY: 766 },
+    { name: 'Auditorium', lat: 20.249192, lng: 85.801627, svgX: 941, svgY: 794 },
+    { name: 'C-Block', lat: 20.248795, lng: 85.801163, svgX: 716, svgY: 961 },
+    { name: 'SC-Block (Sports Complex)', lat: 20.248375, lng: 85.801274, svgX: 764, svgY: 1177 },
+    { name: 'F-Block', lat: 20.248446, lng: 85.801871, svgX: 1053, svgY: 1213 },
+    { name: 'Food Court / Cafeteria', lat: 20.248166, lng: 85.802406, svgX: 1337, svgY: 1308 },
+    { name: 'E-Block', lat: 20.247555, lng: 85.801300, svgX: 871, svgY: 1485 },
+    { name: 'Basketball / Cricket Ground', lat: 20.247594, lng: 85.800515, svgX: 394, svgY: 1614 },
+    { name: 'LH-4 (South-West)', lat: 20.247100, lng: 85.800700, svgX: 583, svgY: 1836 },
+    { name: 'LH-3 (South)', lat: 20.246450, lng: 85.801350, svgX: 847, svgY: 2143 },
+    { name: 'BH-5 / BH-8 (South-East)', lat: 20.245800, lng: 85.802300, svgX: 1302, svgY: 2436 },
+    { name: 'BH-9 (South Gate)', lat: 20.245450, lng: 85.802400, svgX: 1451, svgY: 2637 },
+    { name: 'Football Court 2 (South End)', lat: 20.245050, lng: 85.802100, svgX: 1344, svgY: 2830 },
   ],
 };
 
 /**
- * Solve 2D affine transformation coefficients using 3 reference points:
- *  x = a * lat + b * lng + c
- *  y = d * lat + e * lng + f
+ * Numerically stable Least Squares regression solver for 2D Affine Transformation:
+ *  x = a * (lat - centerLat) + b * (lng - centerLng) + c_rel
+ *  y = d * (lat - centerLat) + e * (lng - centerLng) + f_rel
  */
-function solveAffineMatrix(anchors) {
-  const [p1, p2, p3] = anchors;
+function solveCalibratedAffineMatrix(anchors, centerLat, centerLng) {
+  let sum_lat2 = 0, sum_lng2 = 0, sum_lat_lng = 0, sum_lat = 0, sum_lng = 0;
+  let sum_x_lat = 0, sum_x_lng = 0, sum_x = 0;
+  let sum_y_lat = 0, sum_y_lng = 0, sum_y = 0;
+  const n = anchors.length;
 
-  const det =
-    p1.lat * (p2.lng - p3.lng) -
-    p2.lat * (p1.lng - p3.lng) +
-    p3.lat * (p1.lng - p2.lng);
+  for (const p of anchors) {
+    const lat = p.lat - centerLat;
+    const lng = p.lng - centerLng;
+    const x = p.svgX;
+    const y = p.svgY;
 
-  if (Math.abs(det) < 1e-12) {
-    // Fallback linear scaling if degenerate
-    return { a: 0, b: 0, c: 790, d: 0, e: 0, f: 1445 };
+    sum_lat2 += lat * lat;
+    sum_lng2 += lng * lng;
+    sum_lat_lng += lat * lng;
+    sum_lat += lat;
+    sum_lng += lng;
+
+    sum_x_lat += x * lat;
+    sum_x_lng += x * lng;
+    sum_x += x;
+
+    sum_y_lat += y * lat;
+    sum_y_lng += y * lng;
+    sum_y += y;
   }
 
-  const a = (p1.svgX * (p2.lng - p3.lng) - p2.svgX * (p1.lng - p3.lng) + p3.svgX * (p1.lng - p2.lng)) / det;
-  const b = (p1.lat * (p2.svgX - p3.svgX) - p2.lat * (p1.svgX - p3.svgX) + p3.lat * (p1.svgX - p2.svgX)) / det;
-  const c = p1.svgX - a * p1.lat - b * p1.lng;
+  function solve3x3(M, V) {
+    const det =
+      M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) -
+      M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) +
+      M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
 
-  const d = (p1.svgY * (p2.lng - p3.lng) - p2.svgY * (p1.lng - p3.lng) + p3.svgY * (p1.lng - p2.lng)) / det;
-  const e = (p1.lat * (p2.svgY - p3.svgY) - p2.lat * (p1.svgY - p3.svgY) + p3.lat * (p1.svgY - p2.svgY)) / det;
-  const f = p1.svgY - d * p1.lat - e * p1.lng;
+    if (Math.abs(det) < 1e-18) {
+      return [0, 0, 790];
+    }
 
-  return { a, b, c, d, e, f };
+    function detReplace(colIdx) {
+      const Mc = M.map((row, rIdx) => {
+        const nr = [...row];
+        nr[colIdx] = V[rIdx];
+        return nr;
+      });
+      return (
+        Mc[0][0] * (Mc[1][1] * Mc[2][2] - Mc[1][2] * Mc[2][1]) -
+        Mc[0][1] * (Mc[1][0] * Mc[2][2] - Mc[1][2] * Mc[2][0]) +
+        Mc[0][2] * (Mc[1][0] * Mc[2][1] - Mc[1][1] * Mc[2][0])
+      );
+    }
+
+    return [
+      detReplace(0) / det,
+      detReplace(1) / det,
+      detReplace(2) / det,
+    ];
+  }
+
+  const M = [
+    [sum_lat2, sum_lat_lng, sum_lat],
+    [sum_lat_lng, sum_lng2, sum_lng],
+    [sum_lat, sum_lng, n],
+  ];
+
+  const [a_rel, b_rel, c_rel] = solve3x3(M, [sum_x_lat, sum_x_lng, sum_x]);
+  const [d_rel, e_rel, f_rel] = solve3x3(M, [sum_y_lat, sum_y_lng, sum_y]);
+
+  return {
+    a_rel,
+    b_rel,
+    c_rel,
+    d_rel,
+    e_rel,
+    f_rel,
+    centerLat,
+    centerLng,
+  };
 }
 
-const affineCoefficients = solveAffineMatrix(CAMPUS_GEO_CONFIG.anchors);
+const affineCoefficients = solveCalibratedAffineMatrix(
+  CAMPUS_GEO_CONFIG.anchors,
+  CAMPUS_GEO_CONFIG.centerLat,
+  CAMPUS_GEO_CONFIG.centerLng
+);
 
 /**
  * Convert GPS latitude & longitude to CampusLink SVG x, y coordinates
@@ -69,7 +143,7 @@ const affineCoefficients = solveAffineMatrix(CAMPUS_GEO_CONFIG.anchors);
  * @returns {Object} { x, y, isInsideCampus, status, accuracyRadiusPixels }
  */
 export function convertGpsToCampusCoordinates({ latitude, longitude, accuracy = null }) {
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number' || isNaN(latitude) || isNaN(longitude)) {
     return { x: null, y: null, isInsideCampus: false, status: 'INVALID_COORDINATES' };
   }
 
@@ -80,20 +154,27 @@ export function convertGpsToCampusCoordinates({ latitude, longitude, accuracy = 
     longitude >= bounds.minLng &&
     longitude <= bounds.maxLng;
 
-  const { a, b, c, d, e, f } = affineCoefficients;
-  let rawX = a * latitude + b * longitude + c;
-  let rawY = d * latitude + e * longitude + f;
+  const { a_rel, b_rel, c_rel, d_rel, e_rel, f_rel, centerLat, centerLng } = affineCoefficients;
+  const dLat = latitude - centerLat;
+  const dLng = longitude - centerLng;
 
-  // Clamp within SVG boundaries
-  const x = Math.max(20, Math.min(svgWidth - 20, Math.round(rawX)));
-  const y = Math.max(20, Math.min(svgHeight - 20, Math.round(rawY)));
+  const rawX = a_rel * dLat + b_rel * dLng + c_rel;
+  const rawY = d_rel * dLat + e_rel * dLng + f_rel;
 
-  // Approximate meter-to-SVG pixel scaling (~0.45 pixels per meter on 1580x2891 map)
-  const accuracyRadiusPixels = accuracy ? Math.max(8, Math.min(80, Math.round(accuracy * 0.45))) : 16;
+  // Clamp within SVG boundaries with a safe margin
+  const x = Math.max(10, Math.min(svgWidth - 10, Math.round(rawX)));
+  const y = Math.max(10, Math.min(svgHeight - 10, Math.round(rawY)));
+
+  // Meter-to-SVG pixel scaling: ~4.6 pixels per meter across the 1580x2891 canvas (~534 meters N-S)
+  const accuracyRadiusPixels = accuracy
+    ? Math.max(12, Math.min(120, Math.round(accuracy * 4.6)))
+    : 20;
 
   return {
     x,
     y,
+    rawX: Math.round(rawX),
+    rawY: Math.round(rawY),
     isInsideCampus,
     status: isInsideCampus ? 'INSIDE_CAMPUS' : 'OUTSIDE_CAMPUS',
     accuracyRadiusPixels,

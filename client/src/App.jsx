@@ -215,16 +215,16 @@ function App() {
       stopTracking();
     } else {
       setLocationError(null);
-      setIsLocationConsentOpen(true);
+      switchOverlay('LOCATION_CONSENT');
     }
   };
 
   const startTrackingAfterConsent = () => {
-    setIsLocationConsentOpen(false);
+    closeOverlay();
 
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
-      setIsLocationConsentOpen(true);
+      switchOverlay('LOCATION_CONSENT');
       return;
     }
 
@@ -232,67 +232,80 @@ function App() {
 
     const geoOptions = {
       enableHighAccuracy: true,
-      maximumAge: 3000,
-      timeout: 15000,
+      maximumAge: 0,
+      timeout: 10000,
     };
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      async (position) => {
-        const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
-        const now = Date.now();
+    const handlePositionUpdate = async (position) => {
+      const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
+      const now = Date.now();
 
-        // Convert real GPS coordinates to SVG canvas position via Affine transformation
-        const campusPos = convertGpsToCampusCoordinates({ latitude, longitude, accuracy });
+      // Convert real GPS coordinates to SVG canvas position via calibrated affine transformation
+      const campusPos = convertGpsToCampusCoordinates({ latitude, longitude, accuracy });
 
-        // Update local live marker position
-        setUserLocation({
-          x: campusPos.x,
-          y: campusPos.y,
+      // Update local live marker position
+      setUserLocation({
+        x: campusPos.x,
+        y: campusPos.y,
+        rawX: campusPos.rawX,
+        rawY: campusPos.rawY,
+        latitude,
+        longitude,
+        accuracy,
+        accuracyRadius: campusPos.accuracyRadiusPixels,
+        heading,
+        speed,
+        isInsideCampus: campusPos.isInsideCampus,
+        status: campusPos.status,
+        userName: 'YOU',
+      });
+
+      // Throttle backend updates by distance and minimum time threshold
+      let shouldSend = false;
+      if (!lastSentPosRef.current) {
+        shouldSend = true;
+      } else {
+        const dist = calculateDistanceMeters(
+          lastSentPosRef.current.latitude,
+          lastSentPosRef.current.longitude,
           latitude,
-          longitude,
-          accuracy,
-          accuracyRadius: campusPos.accuracyRadiusPixels,
-          heading,
-          speed,
-          isInsideCampus: campusPos.isInsideCampus,
-          userName: 'JOHN DOE',
-        });
+          longitude
+        );
+        const timeElapsed = now - lastSentTimeRef.current;
 
-        // Throttle backend updates by distance and minimum time threshold
-        let shouldSend = false;
-        if (!lastSentPosRef.current) {
+        if (dist >= LOCATION_CONFIG.minimumDistanceMeters || timeElapsed >= LOCATION_CONFIG.minimumUpdateIntervalMs) {
           shouldSend = true;
-        } else {
-          const dist = calculateDistanceMeters(
-            lastSentPosRef.current.latitude,
-            lastSentPosRef.current.longitude,
+        }
+      }
+
+      if (shouldSend) {
+        lastSentPosRef.current = { latitude, longitude };
+        lastSentTimeRef.current = now;
+        try {
+          await updateUserLocation({
             latitude,
-            longitude
-          );
-          const timeElapsed = now - lastSentTimeRef.current;
-
-          if (dist >= LOCATION_CONFIG.minimumDistanceMeters || timeElapsed >= LOCATION_CONFIG.minimumUpdateIntervalMs) {
-            shouldSend = true;
-          }
+            longitude,
+            accuracy,
+            altitude,
+            heading,
+            speed,
+          });
+        } catch (err) {
+          console.warn('Backend location sync error:', err.message);
         }
+      }
+    };
 
-        if (shouldSend) {
-          lastSentPosRef.current = { latitude, longitude };
-          lastSentTimeRef.current = now;
-          try {
-            await updateUserLocation({
-              latitude,
-              longitude,
-              accuracy,
-              altitude,
-              heading,
-              speed,
-            });
-          } catch (err) {
-            console.warn('Backend location sync error:', err.message);
-          }
-        }
-      },
+    // Instant initial GPS fix to eliminate initial delay
+    navigator.geolocation.getCurrentPosition(
+      (pos) => handlePositionUpdate(pos),
+      (err) => console.warn('Initial geolocation query:', err.message),
+      geoOptions
+    );
+
+    // Continuous watchPosition for real-time walking updates
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => handlePositionUpdate(pos),
       (err) => {
         console.warn('Geolocation watch error:', err.message);
         let msg = 'Unable to retrieve your location.';
@@ -300,7 +313,6 @@ function App() {
         else if (err.code === 2) msg = 'GPS signal is currently unavailable on campus.';
         else if (err.code === 3) msg = 'Location request timed out. Retrying...';
         setLocationError(msg);
-        setIsLiveLocationActive(false);
       },
       geoOptions
     );

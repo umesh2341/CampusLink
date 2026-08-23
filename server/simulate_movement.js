@@ -11,14 +11,16 @@ function createMockRes() {
   return res;
 }
 
-// Campus waypoints along ITER main avenue from North to South
+// Calibrated campus waypoints along ITER main avenue from North Gate to South Gate
 const WAYPOINTS = [
-  { name: 'North Entrance (Near LH5)', lat: 20.254800, lng: 85.797200 },
-  { name: 'Passing Boys Hostel 2', lat: 20.254100, lng: 85.797500 },
-  { name: 'Arriving at Electronics Office', lat: 20.253200, lng: 85.797900 },
-  { name: 'Entering Academic Block / C-Block Corridor', lat: 20.252400, lng: 85.798400 },
-  { name: 'Central Garden & Food Court Area', lat: 20.251500, lng: 85.799100 },
-  { name: 'South Sports Complex / Cricket Grounds', lat: 20.249800, lng: 85.801000 },
+  { name: 'North Entrance (Near LH5 & Gate 1)', lat: 20.250620, lng: 85.801050 },
+  { name: 'Passing Boys Hostel 1 & 2 Corridor', lat: 20.250000, lng: 85.800830 },
+  { name: 'Arriving at Academic Block / Student Section', lat: 20.249470, lng: 85.800600 },
+  { name: 'Entering C-Block & CDS Central Corridor', lat: 20.248800, lng: 85.801160 },
+  { name: 'Passing Central Library & Sports Complex', lat: 20.248350, lng: 85.801270 },
+  { name: 'Central Food Court & E-Block Gardens', lat: 20.247800, lng: 85.801800 },
+  { name: 'South Hostels Area (LH3 / LH4)', lat: 20.246450, lng: 85.801350 },
+  { name: 'South Campus Grounds (BH9 / Football Ground 2)', lat: 20.245450, lng: 85.802400 },
 ];
 
 async function simulateMovement() {

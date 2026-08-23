@@ -56,7 +56,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       setSubscription(sub);
 
       // Fetch saved preferences from backend
-      const prefRes = await fetch(`/api/push/preferences?endpoint=${encodeURIComponent(sub.endpoint)}`);
+      const prefRes = await fetch(`${API_BASE}/api/push/preferences?endpoint=${encodeURIComponent(sub.endpoint)}`);
       if (prefRes.ok) {
         const prefData = await prefRes.json();
         if (Array.isArray(prefData.enabled_tags)) setEnabledTags(prefData.enabled_tags);
