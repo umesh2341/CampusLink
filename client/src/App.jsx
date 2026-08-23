@@ -86,6 +86,9 @@ function App() {
   const watchIdRef = useRef(null);
   const lastSentPosRef = useRef(null);
   const lastSentTimeRef = useRef(0);
+  // Tracks when the previous valid GPS fix arrived so we can measure the real update interval.
+  // That interval becomes the CSS transition duration — the Ola/Uber technique.
+  const lastGpsReceivedRef = useRef(0);
 
   const LOCATION_CONFIG = {
     minimumDistanceMeters: 4,
@@ -304,8 +307,19 @@ function App() {
       setIsGpsAcquiring(false);
       setIsOffCampus(false);
 
-      // Update local live marker position
-      setUserLocation({
+        // ── Ola/Uber-style animation ────────────────────────────────────────
+        // Measure the real time since the last valid GPS fix.
+        // This becomes the CSS transition duration in LiveUserMarker so the marker
+        // slides at exactly the right speed to arrive just as the next fix comes in.
+        const rawInterval = lastGpsReceivedRef.current > 0
+          ? now - lastGpsReceivedRef.current
+          : 1500; // Sensible first-fix default
+        // Clamp: never faster than 400ms (too jittery) or slower than 5s (too sluggish)
+        const transitionMs = Math.min(Math.max(rawInterval, 400), 5000);
+        lastGpsReceivedRef.current = now;
+        // ────────────────────────────────────────────────────────────────────
+
+        setUserLocation({
         x: campusPos.x,
         y: campusPos.y,
         rawX: campusPos.rawX,
@@ -319,6 +333,7 @@ function App() {
         isInsideCampus: campusPos.isInsideCampus,
         status: campusPos.status,
         userName: 'YOU',
+        transitionMs,
       });
 
       // Throttle backend updates by distance and minimum time threshold

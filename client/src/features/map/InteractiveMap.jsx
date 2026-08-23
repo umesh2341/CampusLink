@@ -533,6 +533,7 @@ function InteractiveMap({
                 userName={userLocation.userName || 'YOU'}
                 heading={userLocation.heading}
                 isInsideCampus={userLocation.isInsideCampus}
+                transitionMs={userLocation.transitionMs ?? 1500}
               />
             )}
           </div>

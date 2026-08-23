@@ -17,6 +17,9 @@ function LiveUserMarker({
   userName = 'YOU',
   heading = null,
   isInsideCampus = true,
+  // The measured GPS update interval from App.jsx — used as CSS transition duration
+  // so the marker arrives at the new position exactly when the next GPS fix comes in.
+  transitionMs = 1500,
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -38,9 +41,9 @@ function LiveUserMarker({
       style={{
         left: `${left}%`,
         top: `${top}%`,
-        // Smooth position interpolation — 0.6s matches the ~1-3s GPS update interval.
-        // GPU-accelerated; willChange tells the browser to promote this to its own layer.
-        transition: 'left 0.6s ease-out, top 0.6s ease-out',
+        // Use the real GPS update interval as the transition duration (Ola/Uber technique).
+        // Linear easing = constant walking speed, no deceleration mid-step.
+        transition: `left ${transitionMs}ms linear, top ${transitionMs}ms linear`,
         willChange: 'left, top',
       }}
     >
