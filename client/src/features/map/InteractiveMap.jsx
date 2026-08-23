@@ -14,6 +14,7 @@ function InteractiveMap({
   lastViewedMap = {},
   userLocation = null,
   isGpsAcquiring = false,
+  isOffCampus = false,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -549,6 +550,17 @@ function InteractiveMap({
               <span>ACQUIRING GPS…</span>
             </div>
             <div className="text-[7.5px] text-ink/70 font-bold">Move to an open area for better signal</div>
+          </div>
+        )}
+
+        {/* Off-campus Toast — shown when GPS is working but user is outside ITER campus */}
+        {isOffCampus && !isGpsAcquiring && (
+          <div className="bg-card border-2 border-red-500 shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 font-bold text-red-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span>OUTSIDE CAMPUS</span>
+            </div>
+            <div className="text-[7.5px] text-muted font-bold">GPS is active. Return to ITER campus to see your marker.</div>
           </div>
         )}
 

@@ -80,6 +80,8 @@ function App() {
   const [isEventsLoading,      setIsEventsLoading]        = useState(false);
   // True between the user enabling tracking and the first valid GPS fix arriving
   const [isGpsAcquiring,       setIsGpsAcquiring]         = useState(false);
+  // True when GPS is working but user is physically outside the ITER campus bounds
+  const [isOffCampus,          setIsOffCampus]            = useState(false);
 
   const watchIdRef = useRef(null);
   const lastSentPosRef = useRef(null);
@@ -205,6 +207,7 @@ function App() {
     }
     setIsLiveLocationActive(false);
     setIsGpsAcquiring(false);
+    setIsOffCampus(false);
     setUserLocation(null);
     lastSentPosRef.current = null;
     lastSentTimeRef.current = 0;
@@ -270,18 +273,36 @@ function App() {
       // Convert real GPS coordinates to SVG canvas position via calibrated affine transformation
       const campusPos = convertGpsToCampusCoordinates({ latitude, longitude, accuracy });
 
-      // OUT_OF_BOUNDS: affine projection put us far outside the SVG canvas.
-      // This happens when GPS accuracy is poor even within the accuracy threshold.
-      // Don't render the marker — keep acquiring.
+      // OUT_OF_BOUNDS: GPS is working fine, but user is physically far from campus.
+      // This is different from ACQUIRING — GPS IS acquired, user is simply NOT on campus.
+      // We: clear the acquiring spinner, mark as off-campus, clear any marker,
+      //     and still sync to backend so their last location is recorded.
       if (campusPos.status === 'OUT_OF_BOUNDS') {
         if (import.meta.env.DEV) {
-          console.log('[TRACKER] Fix rejected — projected outside SVG canvas:', campusPos.rawX, campusPos.rawY);
+          console.log('[TRACKER] User is outside campus bounds. rawX:', campusPos.rawX, 'rawY:', campusPos.rawY);
+        }
+        setIsGpsAcquiring(false);
+        setIsOffCampus(true);
+        setUserLocation(null); // No marker on campus map
+
+        // Still sync to backend (valid GPS data, just outside campus)
+        if (!lastSentPosRef.current ||
+            calculateDistanceMeters(lastSentPosRef.current.latitude, lastSentPosRef.current.longitude, latitude, longitude) >= LOCATION_CONFIG.minimumDistanceMeters ||
+            (now - lastSentTimeRef.current) >= LOCATION_CONFIG.minimumUpdateIntervalMs) {
+          lastSentPosRef.current = { latitude, longitude };
+          lastSentTimeRef.current = now;
+          try {
+            await updateUserLocation({ latitude, longitude, accuracy, altitude, heading, speed });
+          } catch (err) {
+            console.warn('Backend location sync error (off-campus):', err.message);
+          }
         }
         return;
       }
 
-      // We have a valid fix — clear the acquiring state
+      // We have a valid on-campus fix — clear both acquiring and off-campus states
       setIsGpsAcquiring(false);
+      setIsOffCampus(false);
 
       // Update local live marker position
       setUserLocation({
@@ -415,13 +436,20 @@ function App() {
             className={`flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-1 rounded-xs border-2 uppercase transition-all active:translate-y-[1px] ${
               isGpsAcquiring
                 ? 'bg-amber-400 text-ink border-ink shadow-hard'
+                : isOffCampus
+                ? 'bg-paper text-ink border-red-500 shadow-hard'
                 : isLiveLocationActive
                 ? 'bg-confirm text-white border-ink shadow-hard'
                 : 'bg-paper text-ink border-ink hover:bg-card'
             }`}
           >
-            <Navigation className={`w-3.5 h-3.5 ${isGpsAcquiring ? 'animate-spin text-ink' : isLiveLocationActive ? 'text-white' : 'text-signal'}`} />
-            <span>{isGpsAcquiring ? 'ACQUIRING...' : isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
+            <Navigation className={`w-3.5 h-3.5 ${
+              isGpsAcquiring ? 'animate-spin text-ink'
+              : isOffCampus ? 'text-red-500'
+              : isLiveLocationActive ? 'text-white'
+              : 'text-signal'
+            }`} />
+            <span>{isGpsAcquiring ? 'ACQUIRING...' : isOffCampus ? 'OFF CAMPUS' : isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
           </button>
 
           {isOrganizer && (
@@ -480,6 +508,7 @@ function App() {
             lastViewedMap={lastViewedMap}
             userLocation={userLocation}
             isGpsAcquiring={isGpsAcquiring}
+            isOffCampus={isOffCampus}
           />
         ) : currentView === 'addEvent' ? (
           <Suspense fallback={
