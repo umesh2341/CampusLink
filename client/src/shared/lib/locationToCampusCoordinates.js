@@ -161,7 +161,24 @@ export function convertGpsToCampusCoordinates({ latitude, longitude, accuracy = 
   const rawX = a_rel * dLat + b_rel * dLng + c_rel;
   const rawY = d_rel * dLat + e_rel * dLng + f_rel;
 
-  // Clamp within SVG boundaries with a safe margin
+  // If projected position is outside the SVG canvas (with a generous 300px buffer),
+  // return null so the marker does NOT render rather than snapping to a corner.
+  // This prevents every user appearing at (10,10) when their first GPS fix is inaccurate.
+  const BUFFER = 300;
+  if (rawX < -BUFFER || rawX > svgWidth + BUFFER || rawY < -BUFFER || rawY > svgHeight + BUFFER) {
+    return {
+      x: null,
+      y: null,
+      rawX: Math.round(rawX),
+      rawY: Math.round(rawY),
+      isInsideCampus: false,
+      status: 'OUT_OF_BOUNDS',
+      accuracyRadiusPixels: 20,
+    };
+  }
+
+  // Clamp within SVG boundaries with a small margin — only reached for positions
+  // that are close to campus (within the 300px buffer above).
   const x = Math.max(10, Math.min(svgWidth - 10, Math.round(rawX)));
   const y = Math.max(10, Math.min(svgHeight - 10, Math.round(rawY)));
 

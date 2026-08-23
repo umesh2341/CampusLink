@@ -78,6 +78,8 @@ function App() {
   const [userLocation,         setUserLocation]           = useState(null);
   const [locationError,        setLocationError]          = useState(null);
   const [isEventsLoading,      setIsEventsLoading]        = useState(false);
+  // True between the user enabling tracking and the first valid GPS fix arriving
+  const [isGpsAcquiring,       setIsGpsAcquiring]         = useState(false);
 
   const watchIdRef = useRef(null);
   const lastSentPosRef = useRef(null);
@@ -86,7 +88,9 @@ function App() {
   const LOCATION_CONFIG = {
     minimumDistanceMeters: 4,
     minimumUpdateIntervalMs: 5000,
-    maximumAccuracyMeters: 65,
+    // GPS fixes worse than this (in meters) are ignored — no marker placed.
+    // Indoor first-fixes can be 100–500 m off; this prevents the frozen-(10,10) bug.
+    maximumAccuracyMeters: 120,
   };
 
   // ── React Query — data fetching ─────────────────────────────
@@ -200,6 +204,7 @@ function App() {
       watchIdRef.current = null;
     }
     setIsLiveLocationActive(false);
+    setIsGpsAcquiring(false);
     setUserLocation(null);
     lastSentPosRef.current = null;
     lastSentTimeRef.current = 0;
@@ -229,19 +234,54 @@ function App() {
     }
 
     setIsLiveLocationActive(true);
+    setIsGpsAcquiring(true); // Show "ACQUIRING..." UI while GPS warms up
 
     const geoOptions = {
       enableHighAccuracy: true,
       maximumAge: 0,
-      timeout: 10000,
+      // 30s timeout — mobile GPS can take 10-20s to get a first fix indoors.
+      // 10s was too short and was silently killing watchPosition.
+      timeout: 30000,
     };
 
     const handlePositionUpdate = async (position) => {
       const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
       const now = Date.now();
 
+      // Dev-only diagnostic log — never logs in production
+      if (import.meta.env.DEV) {
+        console.log('[TRACKER] GPS UPDATE', {
+          latitude: latitude.toFixed(5),
+          longitude: longitude.toFixed(5),
+          accuracy: accuracy ? Math.round(accuracy) + 'm' : 'unknown',
+        });
+      }
+
+      // ACCURACY GATE: ignore fixes that are too imprecise to be useful.
+      // Indoor first-fixes can be 100–500m off and would snap the marker to a random corner.
+      // We keep isGpsAcquiring=true until we get one clean fix.
+      if (accuracy !== null && accuracy > LOCATION_CONFIG.maximumAccuracyMeters) {
+        if (import.meta.env.DEV) {
+          console.log('[TRACKER] Fix rejected — accuracy too low:', Math.round(accuracy) + 'm >', LOCATION_CONFIG.maximumAccuracyMeters + 'm');
+        }
+        return; // Wait for GPS to improve before rendering/sending
+      }
+
       // Convert real GPS coordinates to SVG canvas position via calibrated affine transformation
       const campusPos = convertGpsToCampusCoordinates({ latitude, longitude, accuracy });
+
+      // OUT_OF_BOUNDS: affine projection put us far outside the SVG canvas.
+      // This happens when GPS accuracy is poor even within the accuracy threshold.
+      // Don't render the marker — keep acquiring.
+      if (campusPos.status === 'OUT_OF_BOUNDS') {
+        if (import.meta.env.DEV) {
+          console.log('[TRACKER] Fix rejected — projected outside SVG canvas:', campusPos.rawX, campusPos.rawY);
+        }
+        return;
+      }
+
+      // We have a valid fix — clear the acquiring state
+      setIsGpsAcquiring(false);
 
       // Update local live marker position
       setUserLocation({
@@ -296,10 +336,14 @@ function App() {
       }
     };
 
-    // Instant initial GPS fix to eliminate initial delay
+    // Instant initial GPS fix — fires as soon as the browser returns any position.
+    // We re-use the same handlePositionUpdate which applies the accuracy gate.
     navigator.geolocation.getCurrentPosition(
       (pos) => handlePositionUpdate(pos),
-      (err) => console.warn('Initial geolocation query:', err.message),
+      (err) => {
+        // First-fix failed — watchPosition will keep trying
+        if (import.meta.env.DEV) console.warn('[TRACKER] Initial fix failed:', err.message);
+      },
       geoOptions
     );
 
@@ -307,11 +351,17 @@ function App() {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => handlePositionUpdate(pos),
       (err) => {
-        console.warn('Geolocation watch error:', err.message);
+        if (import.meta.env.DEV) console.warn('[TRACKER] watchPosition error:', err.message);
         let msg = 'Unable to retrieve your location.';
-        if (err.code === 1) msg = 'Location permission was denied. Please allow location access in your browser settings.';
-        else if (err.code === 2) msg = 'GPS signal is currently unavailable on campus.';
-        else if (err.code === 3) msg = 'Location request timed out. Retrying...';
+        if (err.code === 1) {
+          msg = 'Location permission was denied. Please allow location access in your browser settings.';
+          setIsGpsAcquiring(false);
+        } else if (err.code === 2) {
+          msg = 'GPS signal is currently unavailable on campus.';
+        } else if (err.code === 3) {
+          // Timeout: watchPosition keeps running, don't stop tracking
+          msg = 'GPS is taking longer than usual. Move to an open area for a better signal.';
+        }
         setLocationError(msg);
       },
       geoOptions
@@ -363,13 +413,15 @@ function App() {
             onClick={handleToggleLiveLocation}
             title={isLiveLocationActive ? "Stop live tracking" : "Enable live tracking on campus map"}
             className={`flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-1 rounded-xs border-2 uppercase transition-all active:translate-y-[1px] ${
-              isLiveLocationActive
+              isGpsAcquiring
+                ? 'bg-amber-400 text-ink border-ink shadow-hard'
+                : isLiveLocationActive
                 ? 'bg-confirm text-white border-ink shadow-hard'
                 : 'bg-paper text-ink border-ink hover:bg-card'
             }`}
           >
-            <Navigation className={`w-3.5 h-3.5 ${isLiveLocationActive ? 'text-white' : 'text-signal'}`} />
-            <span>{isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
+            <Navigation className={`w-3.5 h-3.5 ${isGpsAcquiring ? 'animate-spin text-ink' : isLiveLocationActive ? 'text-white' : 'text-signal'}`} />
+            <span>{isGpsAcquiring ? 'ACQUIRING...' : isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
           </button>
 
           {isOrganizer && (
@@ -427,6 +479,7 @@ function App() {
             activeEventsMap={activeEventsMap}
             lastViewedMap={lastViewedMap}
             userLocation={userLocation}
+            isGpsAcquiring={isGpsAcquiring}
           />
         ) : currentView === 'addEvent' ? (
           <Suspense fallback={

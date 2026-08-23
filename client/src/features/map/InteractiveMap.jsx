@@ -13,6 +13,7 @@ function InteractiveMap({
   activeEventsMap,
   lastViewedMap = {},
   userLocation = null,
+  isGpsAcquiring = false,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -540,7 +541,18 @@ function InteractiveMap({
       {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
       <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">
 
-        {/* Live GPS Telemetry Pill (when tracking active) */}
+        {/* Acquiring GPS Toast — shown while GPS warms up before first valid fix */}
+        {isGpsAcquiring && (
+          <div className="bg-amber-400 border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-ink animate-ping" />
+              <span>ACQUIRING GPS…</span>
+            </div>
+            <div className="text-[7.5px] text-ink/70 font-bold">Move to an open area for better signal</div>
+          </div>
+        )}
+
+        {/* Live GPS Telemetry Pill (when tracking active and position known) */}
         {userLocation && userLocation.x !== null && userLocation.y !== null && (
           <div className="bg-card border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
             <div className="flex items-center justify-between font-bold text-signal">
