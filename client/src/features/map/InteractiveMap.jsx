@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LocateFixed, Plus, Minus } from 'lucide-react';
+import { LocateFixed, Plus, Minus, Type } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
 import LiveUserMarker from './LiveUserMarker';
@@ -30,6 +30,7 @@ function InteractiveMap({
   const [pan, setPanState] = useState(() => savedPan ?? { x: 0, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
 
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
@@ -537,6 +538,49 @@ function InteractiveMap({
               />
             )}
           </div>
+
+          {/* Building Name Labels Layer — shown only when showLabels is enabled and zoom is sufficient */}
+          {showLabels && zoom >= 0.55 && (
+            <div className="absolute inset-0 pointer-events-none select-none z-15">
+              {buildings.map((building) => {
+                const coords = buildingCoords[building.svg_element_id];
+                if (!coords || !building.name) return null;
+                const left = (coords.x / 1580) * 100;
+                const top  = (coords.y / 2891) * 100;
+                return (
+                  <div
+                    key={`label-${building.id}`}
+                    className="absolute -translate-x-1/2"
+                    style={{
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      transform: 'translate(-50%, -130%)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'VT323', monospace",
+                        fontSize: '11px',
+                        lineHeight: '1.1',
+                        color: '#1C1A17',
+                        display: 'block',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                        padding: '1px 3px',
+                        backgroundColor: 'rgba(255,255,255,0.72)',
+                        border: '1px solid #1C1A17',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {building.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -595,26 +639,44 @@ function InteractiveMap({
             </button>
           )}
 
-          {/* Smooth Zoom Controls (+ / -) */}
-          <div className="flex flex-col border-2 border-ink bg-card rounded-xs shadow-hard overflow-hidden">
+          {/* Label toggle + Zoom controls stacked in same column */}
+          <div className="flex flex-col items-center gap-1">
+            {/* Building Name Label Toggle */}
             <button
               type="button"
-              onClick={handleZoomIn}
-              title="Zoom In"
-              aria-label="Zoom in on map"
-              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper border-b border-ink text-ink transition-colors flex items-center justify-center cursor-pointer"
+              onClick={() => setShowLabels(v => !v)}
+              title={showLabels ? 'Hide building labels' : 'Show building labels'}
+              aria-label="Toggle building name labels"
+              className={`border-2 border-ink bg-card rounded-xs shadow-hard p-1.5 sm:p-2 flex items-center justify-center cursor-pointer transition-colors ${
+                showLabels
+                  ? 'bg-ink text-paper'
+                  : 'hover:bg-paper text-ink'
+              }`}
             >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              title="Zoom Out"
-              aria-label="Zoom out on map"
-              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper text-ink transition-colors flex items-center justify-center cursor-pointer"
-            >
-              <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
+
+            {/* Smooth Zoom Controls (+ / -) */}
+            <div className="flex flex-col border-2 border-ink bg-card rounded-xs shadow-hard overflow-hidden">
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                title="Zoom In"
+                aria-label="Zoom in on map"
+                className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper border-b border-ink text-ink transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                title="Zoom Out"
+                aria-label="Zoom out on map"
+                className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper text-ink transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
