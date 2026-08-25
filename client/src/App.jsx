@@ -210,8 +210,8 @@ function App() {
     setIsEventModalOpen(true);
   };
 
-  /** Search result: department or building tap — highlight on map ONLY, do NOT open side panel */
-  const handleSelectBuildingFromSearch = (building) => highlightBuilding(building);
+  /** Search result: department or building tap — highlight on map AND open side panel for navigation */
+  const handleSelectBuildingFromSearch = (building) => selectBuilding(building);
 
   /** Search result: event tap — highlight building on map and open event pass modal ONLY (without side panel) */
   const handleSelectEventFromSearch = (building, event) => {

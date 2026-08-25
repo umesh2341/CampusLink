@@ -192,7 +192,7 @@ function InteractiveMap({
         el.style.transition = 'opacity 0.2s ease, filter 0.2s ease';
 
         const clickHandler = (e) => {
-          if (dragDistanceRef.current > 6) return;
+          if (dragDistanceRef.current > 16) return;
           e.stopPropagation();
           onSelectBuilding(building);
         };
