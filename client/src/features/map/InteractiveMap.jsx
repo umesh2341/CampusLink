@@ -3,6 +3,8 @@ import { LocateFixed, Plus, Minus, Type } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
 import LiveUserMarker from './LiveUserMarker';
+import NavigationRouteLayer from './components/NavigationRouteLayer';
+import NavigationHUD from './components/NavigationHUD';
 import { buildingCoords } from '../../shared/lib/buildingCoords';
 import useAppStore from '../../shared/store/useAppStore';
 
@@ -15,6 +17,13 @@ function InteractiveMap({
   userLocation = null,
   isGpsAcquiring = false,
   isOffCampus = false,
+  route = null,
+  navigationStatus = 'idle',
+  navigationError = null,
+  onStopNavigation = null,
+  destinationBuilding = null,
+  transportMode = 'WALK',
+  onSetTransportMode = null,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -268,7 +277,7 @@ function InteractiveMap({
       hasAutoCenteredUserRef.current = false;
       return;
     }
-    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding) {
+    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding && !route) {
       hasAutoCenteredUserRef.current = true;
       const vp = viewportRef.current;
       const vpWidth = vp.clientWidth;
@@ -278,7 +287,44 @@ function InteractiveMap({
       const newPanY = vpHeight / 2 - userLocation.y * targetZoom;
       updateTransform(targetZoom, { x: newPanX, y: newPanY });
     }
-  }, [userLocation, selectedBuilding]);
+  }, [userLocation, selectedBuilding, route]);
+
+  // Auto-fit map viewport to show the full route when navigation starts or changes
+  const lastFittedRouteTsRef = useRef(null);
+  useEffect(() => {
+    if (route && route.coordinates && route.coordinates.length > 0 && viewportRef.current) {
+      if (lastFittedRouteTsRef.current === route.timestamp) return;
+      lastFittedRouteTsRef.current = route.timestamp;
+
+      const vp = viewportRef.current;
+      const vWidth = vp.clientWidth;
+      const vHeight = vp.clientHeight;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      route.coordinates.forEach((pt) => {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+      });
+
+      const routeWidth = Math.max(160, maxX - minX);
+      const routeHeight = Math.max(160, maxY - minY);
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      // Allow comfortable padding for header, HUD at top, and controls at bottom
+      const scaleX = (vWidth * 0.70) / routeWidth;
+      const scaleY = (vHeight * 0.55) / routeHeight;
+      const minZ = getMinZoom();
+      const targetZoom = Math.min(2.2, Math.max(minZ, Math.min(scaleX, scaleY)));
+
+      const targetPanX = vWidth / 2 - centerX * targetZoom;
+      const targetPanY = vHeight / 2 - centerY * targetZoom;
+
+      updateTransform(targetZoom, { x: targetPanX, y: targetPanY });
+    }
+  }, [route]);
 
   // Desktop Mouse Drag Handlers
   const handleMouseDown = (e) => {
@@ -525,6 +571,15 @@ function InteractiveMap({
               );
             })}
 
+            {/* Directional Navigation Route Layer */}
+            {route && (
+              <NavigationRouteLayer
+                route={route}
+                userLocation={userLocation}
+                destinationBuilding={destinationBuilding}
+              />
+            )}
+
             {/* Live User Location Beacon Marker */}
             {userLocation && userLocation.x !== null && userLocation.y !== null && (
               <LiveUserMarker
@@ -624,6 +679,17 @@ function InteractiveMap({
           )}
         </div>
       </div>
+
+      {/* ── Active Route Guidance HUD Dock ── */}
+      <NavigationHUD
+        activeRoute={route}
+        destinationBuilding={destinationBuilding}
+        navigationStatus={navigationStatus}
+        navigationError={navigationError}
+        transportMode={transportMode}
+        onStopNavigation={onStopNavigation}
+        onSetTransportMode={onSetTransportMode}
+      />
 
       {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
       <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">

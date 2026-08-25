@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Users, MapPin } from 'lucide-react';
+import { X, Calendar, Users, MapPin, Navigation } from 'lucide-react';
 
 const categoryLabels = {
   academic: { label: 'Academic', dot: 'bg-category-academic-fill' },
@@ -13,7 +13,15 @@ const categoryLabels = {
   other: { label: 'Other/Misc', dot: 'bg-category-other-misc-fill' },
 };
 
-function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
+const TRANSPORT_OPTIONS = [
+  { id: 'WALK', label: 'Walk', icon: '🚶' },
+  { id: 'BIKE', label: 'Bike', icon: '🏍️' },
+  { id: 'CAR',  label: 'Car',  icon: '🚗' },
+];
+
+function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onStartNavigation }) {
+  const [selectedMode, setSelectedMode] = React.useState('WALK');
+
   if (!building) return null;
 
   const categoryInfo = categoryLabels[building.category] || { label: 'Unknown', dot: 'bg-gray-400' };
@@ -65,25 +73,68 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
           >
             {/* ── Header ── */}
-            <div className="border-b-2 border-ink p-4 flex items-start justify-between bg-card shrink-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 border border-ink/40 ${categoryInfo.dot}`} />
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted">
-                    [ {categoryInfo.label} ]
-                  </span>
+            <div className="border-b-2 border-ink p-4 space-y-3 bg-card shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 border border-ink/40 ${categoryInfo.dot}`} />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted">
+                      [ {categoryInfo.label} ]
+                    </span>
+                  </div>
+                  <h2 className="text-3xl font-display uppercase tracking-tight text-ink leading-tight">
+                    {building.name}
+                  </h2>
                 </div>
-                <h2 className="text-3xl font-display uppercase tracking-tight text-ink leading-tight">
-                  {building.name}
-                </h2>
+                <button
+                  onClick={onClose}
+                  aria-label="Close panel"
+                  className="p-1.5 bg-paper border-2 border-ink text-ink hover:bg-ink hover:text-paper rounded-xs transition-all active:translate-y-[2px] focus:outline-none cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Close panel"
-                className="p-1.5 bg-paper border-2 border-ink text-ink hover:bg-ink hover:text-paper rounded-xs transition-all active:translate-y-[2px] focus:outline-none"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* ── Transport Mode & Start Navigation Action ── */}
+              {onStartNavigation && (
+                <div className="space-y-2 pt-1 border-t border-ink/10">
+                  <div className="space-y-1">
+                    <div className="text-[9px] font-bold text-muted uppercase tracking-widest">
+                      HOW ARE YOU TRAVELLING?
+                    </div>
+                    <div className="flex gap-1.5">
+                      {TRANSPORT_OPTIONS.map((opt) => {
+                        const isSelected = selectedMode === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setSelectedMode(opt.id)}
+                            className={[
+                              'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xs border-2 text-xs font-bold uppercase transition-all duration-150 cursor-pointer active:translate-y-[1px]',
+                              isSelected
+                                ? 'bg-ink text-paper border-ink shadow-hard'
+                                : 'bg-paper text-ink border-ink/30 hover:border-ink hover:shadow-xs',
+                            ].join(' ')}
+                          >
+                            <span className="text-sm leading-none">{opt.icon}</span>
+                            <span className="text-[11px]">{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onStartNavigation(building, selectedMode)}
+                    className="w-full flex items-center justify-center gap-2 bg-signal hover:bg-signal/90 text-ink border-2 border-ink py-2.5 px-4 rounded-xs font-mono text-xs sm:text-sm font-bold uppercase tracking-wider shadow-hard active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                  >
+                    <Navigation className="w-4 h-4 text-ink fill-ink rotate-45" />
+                    <span>START NAVIGATION</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── Content ── */}

@@ -18,6 +18,7 @@ import {
   convertGpsToCampusCoordinates,
   calculateDistanceMeters,
 } from './shared/lib/locationToCampusCoordinates';
+import useNavigation from './features/map/hooks/useNavigation';
 
 import useAppStore from './shared/store/useAppStore';
 import NotificationPrompt from './features/notifications/NotificationPrompt';
@@ -73,6 +74,29 @@ function App() {
   const [isNoticeBannerDismissed, setIsNoticeBannerDismissed] = useState(
     () => sessionStorage.getItem('notices_dismissed') === 'true'
   );
+
+  // ── Navigation Hook ─────────────────────────────────────────
+  const {
+    isNavigating,
+    navigationStatus,
+    activeRoute,
+    destinationBuilding: navDestination,
+    navigationError,
+    transportMode,
+    startNavigation,
+    stopNavigation,
+    updateDestination,
+    setTransportMode,
+  } = useNavigation();
+
+  const handleStartNavigation = (building, mode = 'WALK') => {
+    closeOverlay(); // Close side panel to view full campus map & route
+    if (!isLiveLocationActive) {
+      switchOverlay('LOCATION_CONSENT');
+      return;
+    }
+    startNavigation(building, userLocation, mode);
+  };
 
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
@@ -208,6 +232,7 @@ function App() {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    stopNavigation();
     setIsLiveLocationActive(false);
     setIsGpsAcquiring(false);
     setIsOffCampus(false);
@@ -524,6 +549,13 @@ function App() {
             userLocation={userLocation}
             isGpsAcquiring={isGpsAcquiring}
             isOffCampus={isOffCampus}
+            route={activeRoute}
+            navigationStatus={navigationStatus}
+            navigationError={navigationError}
+            onStopNavigation={stopNavigation}
+            destinationBuilding={navDestination}
+            transportMode={transportMode}
+            onSetTransportMode={setTransportMode}
           />
         ) : currentView === 'addEvent' ? (
           <Suspense fallback={
@@ -635,6 +667,7 @@ function App() {
         isOpen={activeOverlay === 'SIDE_PANEL'}
         onClose={closeOverlay}
         onSelectEvent={handleSelectEvent}
+        onStartNavigation={handleStartNavigation}
       />
 
       {/* ── Club Detail Card Modal ── */}
