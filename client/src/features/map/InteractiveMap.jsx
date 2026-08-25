@@ -45,7 +45,7 @@ function InteractiveMap({
 
   // These multipliers are applied to the initial 'fit to viewport' zoom level
   // Adjust these to control how far users can zoom out on different devices
-  const MIN_ZOOM_MOBILE = 0.90;
+  const MIN_ZOOM_MOBILE = 1.6;
   const MIN_ZOOM_DESKTOP = 2.4;
 
   const getFitZoom = () => {
@@ -583,11 +583,11 @@ function InteractiveMap({
                   >
                     <span
                       style={{
-                        fontFamily: "'monospace','VT323', monospace",
+                        fontFamily: "'Jaini Purva','VT323', monospace",
                         fontSize: `${dynamicFontSize}px`,
                         fontWeight: 'normal',
 
-                        lineHeight: '0.8',
+                        lineHeight: '0.6',
                         color: '#F49A57',
 
                         textShadow: `
