@@ -538,43 +538,71 @@ function InteractiveMap({
               />
             )}
           </div>
-
-          {/* Building Name Labels Layer — shown only when showLabels is enabled and zoom is sufficient */}
-          {showLabels && zoom >= 0.55 && (
+          {/* Lowered the zoom threshold from 0.55 to 0.25 so labels stay visible longer when zoomed out */}
+          {showLabels && zoom >= 0.25 && (
             <div className="absolute inset-0 pointer-events-none select-none z-15">
               {buildings.map((building) => {
                 const coords = buildingCoords[building.svg_element_id];
-                if (!coords || !building.name) return null;
+                if (!coords || (!building.short_name && !building.name)) return null;
+
                 const left = (coords.x / 1580) * 100;
-                const top  = (coords.y / 2891) * 100;
+                const top = (coords.y / 2891) * 100;
+
+                // --- DYNAMIC SCALING CALCULATIONS ---
+                // 1. Size grows as you zoom out, capped between 14px (min) and 28px (max)
+                const dynamicFontSize = Math.max(14, Math.min(28, 14 / zoom));
+
+                // 2. Width shrinks as you zoom out, forcing text to stack vertically to avoid overlapping
+                const dynamicMaxWidth = Math.max(60, 140 * zoom);
+                // ------------------------------------
+
                 return (
                   <div
                     key={`label-${building.id}`}
-                    className="absolute -translate-x-1/2"
                     style={{
+                      position: 'absolute',
                       left: `${left}%`,
                       top: `${top}%`,
-                      transform: 'translate(-50%, -130%)',
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
                     }}
                   >
                     <span
                       style={{
-                        fontFamily: "'VT323', monospace",
-                        fontSize: '11px',
-                        lineHeight: '1.1',
-                        color: '#1C1A17',
-                        display: 'block',
+                        fontFamily: "'monospace','VT323', monospace",
+                        fontSize: `${dynamicFontSize}px`,
+                        fontWeight: 'normal',
+
+                        // Tightened the line height so vertically stacked words stay close together
+                        lineHeight: '0.5',
+                        color: '#F49A57',
+
+                        textShadow: `
+                      -1px -1px 0 #121212,  
+                       1px -1px 0 #121212,
+                      -1px  1px 0 #121212,
+                       1px  1px 0 #121212,
+                       3px  4px 0 rgba(0, 0, 0, 0.55)
+                    `,
+
+                        display: 'inline-block',
                         textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.02em',
+
+                        whiteSpace: 'normal',
+                        maxWidth: `${dynamicMaxWidth}px`,
+                        wordWrap: 'break-word',
+
+                        letterSpacing: '0.05em',
                         textTransform: 'uppercase',
-                        padding: '1px 3px',
-                        backgroundColor: 'rgba(255,255,255,0.72)',
-                        border: '1px solid #1C1A17',
+                        transform: 'rotate(0deg)',
                         userSelect: 'none',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
                       }}
                     >
-                      {building.name}
+                      {building.short_name || building.name}
                     </span>
                   </div>
                 );
@@ -647,11 +675,10 @@ function InteractiveMap({
               onClick={() => setShowLabels(v => !v)}
               title={showLabels ? 'Hide building labels' : 'Show building labels'}
               aria-label="Toggle building name labels"
-              className={`border-2 border-ink bg-card rounded-xs shadow-hard p-1.5 sm:p-2 flex items-center justify-center cursor-pointer transition-colors ${
-                showLabels
-                  ? 'bg-ink text-paper'
-                  : 'hover:bg-paper text-ink'
-              }`}
+              className={`border-2 border-ink bg-card rounded-xs shadow-hard p-1.5 sm:p-2 flex items-center justify-center cursor-pointer transition-colors ${showLabels
+                ? 'bg-ink text-paper'
+                : 'hover:bg-paper text-ink'
+                }`}
             >
               <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
