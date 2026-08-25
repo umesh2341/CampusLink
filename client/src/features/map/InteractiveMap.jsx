@@ -543,17 +543,30 @@ function InteractiveMap({
             <div className="absolute inset-0 pointer-events-none select-none z-15">
               {buildings.map((building) => {
                 const coords = buildingCoords[building.svg_element_id];
-                if (!coords || (!building.short_name && !building.name)) return null;
+                if (!coords || building.hide_label || (!building.short_name && !building.name)) return null;
 
                 const left = (coords.x / 1580) * 100;
                 const top = (coords.y / 2891) * 100;
 
                 // --- DYNAMIC SCALING CALCULATIONS ---
-                // 1. Size grows as you zoom out, capped between 14px (min) and 28px (max)
-                const dynamicFontSize = Math.max(14, Math.min(28, 14 / zoom));
+                const dynamicFontSize = Math.max(30, Math.min(60, 30 / zoom));
 
-                // 2. Width shrinks as you zoom out, forcing text to stack vertically to avoid overlapping
-                const dynamicMaxWidth = Math.max(60, 140 * zoom);
+                // --- STRICT 2-ROW BREAKING LOGIC ---
+                const displayName = building.short_name || building.name;
+                const isZoomedOut = zoom < 0.8;
+
+                let formattedName = displayName;
+
+                if (isZoomedOut) {
+                  const words = displayName.split(' ');
+                  if (words.length > 1) {
+                    // Finds the middle of the name and splits it into exactly 2 lines
+                    const midPoint = Math.ceil(words.length / 2);
+                    const firstHalf = words.slice(0, midPoint).join(' ');
+                    const secondHalf = words.slice(midPoint).join(' ');
+                    formattedName = `${firstHalf}\n${secondHalf}`;
+                  }
+                }
                 // ------------------------------------
 
                 return (
@@ -574,8 +587,7 @@ function InteractiveMap({
                         fontSize: `${dynamicFontSize}px`,
                         fontWeight: 'normal',
 
-                        // Tightened the line height so vertically stacked words stay close together
-                        lineHeight: '0.5',
+                        lineHeight: '0.8',
                         color: '#F49A57',
 
                         textShadow: `
@@ -589,9 +601,10 @@ function InteractiveMap({
                         display: 'inline-block',
                         textAlign: 'center',
 
-                        whiteSpace: 'normal',
-                        maxWidth: `${dynamicMaxWidth}px`,
-                        wordWrap: 'break-word',
+                        // Use 'pre' when zoomed out to strictly honor our \n break and ignore everything else
+                        whiteSpace: isZoomedOut ? 'pre' : 'nowrap',
+
+                        // Removed maxWidth and wordWrap completely so CSS doesn't accidentally force a 3rd line
 
                         letterSpacing: '0.05em',
                         textTransform: 'uppercase',
@@ -602,7 +615,7 @@ function InteractiveMap({
                         padding: 0,
                       }}
                     >
-                      {building.short_name || building.name}
+                      {formattedName}
                     </span>
                   </div>
                 );
