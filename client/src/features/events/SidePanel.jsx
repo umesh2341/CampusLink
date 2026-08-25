@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Users, MapPin } from 'lucide-react';
 
 const categoryLabels = {
-  academic:     { label: 'Academic',       dot: 'bg-category-academic-fill' },
-  hostel_boys:  { label: 'Boys Hostel',    dot: 'bg-category-boys-hostel-fill' },
-  hostel_girls: { label: 'Girls Hostel',   dot: 'bg-category-girls-hostel-fill' },
-  admin:        { label: 'Admin/Research', dot: 'bg-category-admin-research-fill' },
-  cafeteria:    { label: 'Cafeteria/Food', dot: 'bg-category-cafeteria-food-fill' },
-  sports:       { label: 'Sports',         dot: 'bg-category-sports-fill' },
-  gardens:      { label: 'Gardens',        dot: 'bg-category-gardens-fill' },
-  other:        { label: 'Other/Misc',     dot: 'bg-category-other-misc-fill' },
+  academic: { label: 'Academic', dot: 'bg-category-academic-fill' },
+  hostel_boys: { label: 'Boys Hostel', dot: 'bg-category-boys-hostel-fill' },
+  hostel_girls: { label: 'Girls Hostel', dot: 'bg-category-girls-hostel-fill' },
+  admin: { label: 'Admin/Research', dot: 'bg-category-admin-research-fill' },
+  cafeteria: { label: 'Cafeteria/Food', dot: 'bg-category-cafeteria-food-fill' },
+  sports: { label: 'Sports', dot: 'bg-category-sports-fill' },
+  gardens: { label: 'Gardens', dot: 'bg-category-gardens-fill' },
+  other: { label: 'Other/Misc', dot: 'bg-category-other-misc-fill' },
 };
 
 function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
@@ -59,7 +59,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
+            transition={{ type: 'tween', duration: 0.5, ease: [0.25, 0.8, 0.25, 1] }}
             className="fixed z-50 bg-paper flex flex-col font-mono
               inset-x-0 bottom-0 top-0
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
