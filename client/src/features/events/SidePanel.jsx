@@ -59,7 +59,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
             className="fixed z-50 bg-paper flex flex-col font-mono
               inset-x-0 bottom-0 top-0
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
@@ -103,10 +103,8 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
                   {events.map((event) => {
                     const locationStr = getLocationString(event.floor, event.room_number);
                     return (
-                      <motion.div
+                      <div
                         key={event.id}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
                         onClick={() => onSelectEvent(event)}
                         className="group cursor-pointer border-2 border-ink p-3.5 rounded-xs bg-card shadow-hard
                                    hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none
@@ -136,7 +134,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
                             <span>CLUB: <strong className="text-ink">{event.organizing_club}</strong></span>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
