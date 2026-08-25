@@ -75,29 +75,6 @@ function App() {
     () => sessionStorage.getItem('notices_dismissed') === 'true'
   );
 
-  // ── Navigation Hook ─────────────────────────────────────────
-  const {
-    isNavigating,
-    navigationStatus,
-    activeRoute,
-    destinationBuilding: navDestination,
-    navigationError,
-    transportMode,
-    startNavigation,
-    stopNavigation,
-    updateDestination,
-    setTransportMode,
-  } = useNavigation();
-
-  const handleStartNavigation = (building, mode = 'WALK') => {
-    closeOverlay(); // Close side panel to view full campus map & route
-    if (!isLiveLocationActive) {
-      switchOverlay('LOCATION_CONSENT');
-      return;
-    }
-    startNavigation(building, userLocation, mode);
-  };
-
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
   const [locationError,        setLocationError]          = useState(null);
@@ -120,6 +97,29 @@ function App() {
     // GPS fixes worse than this (in meters) are ignored — no marker placed.
     // Indoor first-fixes can be 100–500 m off; this prevents the frozen-(10,10) bug.
     maximumAccuracyMeters: 120,
+  };
+
+  // ── Navigation Hook ─────────────────────────────────────────
+  const {
+    isNavigating,
+    navigationStatus,
+    activeRoute,
+    destinationBuilding: navDestination,
+    navigationError,
+    transportMode,
+    startNavigation,
+    stopNavigation,
+    updateDestination,
+    setTransportMode,
+  } = useNavigation();
+
+  const handleStartNavigation = (building, mode = 'WALK') => {
+    closeOverlay(); // Close side panel to view full campus map & route
+    if (!isLiveLocationActive) {
+      switchOverlay('LOCATION_CONSENT');
+      return;
+    }
+    startNavigation(building, userLocation, mode);
   };
 
   // ── React Query — data fetching ─────────────────────────────
