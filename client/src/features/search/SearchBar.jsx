@@ -10,6 +10,54 @@ function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult })
   const debouncedQuery = useDebounce(query.trim(), 300);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  
+  const [placeholderSuffix, setPlaceholderSuffix] = useState('');
+  const queryRef = useRef(query);
+
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
+
+  useEffect(() => {
+    const words = ['EVENTS...', 'BUILDINGS...', 'DEPARTMENTS...'];
+    let wordIndex = 0;
+    let text = '';
+    let isDeleting = false;
+    let timeoutId;
+
+    const tick = () => {
+      // Pause animation if user is typing
+      if (queryRef.current.length > 0) {
+        timeoutId = setTimeout(tick, 1000);
+        return;
+      }
+
+      const currentWord = words[wordIndex];
+      if (isDeleting) {
+        text = currentWord.substring(0, text.length - 1);
+      } else {
+        text = currentWord.substring(0, text.length + 1);
+      }
+
+      setPlaceholderSuffix(text);
+
+      let delta = isDeleting ? 40 : 100;
+
+      if (!isDeleting && text === currentWord) {
+        delta = 2000;
+        isDeleting = true;
+      } else if (isDeleting && text === '') {
+        isDeleting = false;
+        wordIndex = (wordIndex + 1) % words.length;
+        delta = 500;
+      }
+
+      timeoutId = setTimeout(tick, delta);
+    };
+
+    timeoutId = setTimeout(tick, 500);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   /* ── Close dropdown on outside click ── */
   useEffect(() => {
@@ -79,7 +127,7 @@ function SearchBar({ buildings, onSelectDepartmentResult, onSelectEventResult })
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => { if (debouncedQuery.length > 0) setIsOpen(true); }}
-          placeholder="SEARCH DEPT, EVENT, OR BUILDING..."
+          placeholder={`SEARCH FOR ${placeholderSuffix}`}
           className="w-full text-xs bg-transparent border-none outline-none text-ink placeholder:text-muted uppercase tracking-tight"
         />
 

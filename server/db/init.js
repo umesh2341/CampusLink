@@ -6,42 +6,42 @@ dotenv.config();
 const { Client } = pg;
 
 const buildingsData = [
-  { svg_element_id: 'electronic-office', name: 'Electronics Office', category: 'academic' },
-  { svg_element_id: 'lh1', name: 'Ladies Hostel 1', category: 'hostel_girls' },
-  { svg_element_id: 'lh2', name: 'Ladies Hostel 2', category: 'hostel_girls' },
-  { svg_element_id: 'lh3', name: 'Ladies Hostel 3', category: 'hostel_girls' },
-  { svg_element_id: 'lh4', name: 'Ladies Hostel 4', category: 'hostel_girls' },
-  { svg_element_id: 'lh5', name: 'Ladies Hostel 5', category: 'hostel_girls' },
-  { svg_element_id: 'bh1', name: 'Boys Hostel 1', category: 'hostel_boys' },
-  { svg_element_id: 'bh2', name: 'Boys Hostel 2', category: 'hostel_boys' },
-  { svg_element_id: 'bh5', name: 'Boys Hostel 5', category: 'hostel_boys' },
-  { svg_element_id: 'bh6', name: 'Boys Hostel 6', category: 'hostel_boys' },
-  { svg_element_id: 'bh7', name: 'Boys Hostel 7', category: 'hostel_boys' },
-  { svg_element_id: 'bh8', name: 'Boys Hostel 8', category: 'hostel_boys' },
-  { svg_element_id: 'bh9', name: 'Boys Hostel 9', category: 'hostel_boys' },
-  { svg_element_id: 'bh10', name: 'Boys Hostel 10', category: 'hostel_boys' },
-  { svg_element_id: 'bh12', name: 'Boys Hostel 12', category: 'hostel_boys' },
-  { svg_element_id: 'cricket-court1', name: 'Cricket Court', category: 'sports' },
-  { svg_element_id: 'football-court1', name: 'Football Court 1', category: 'sports' },
-  { svg_element_id: 'football-court2', name: 'Football Court 2', category: 'sports' },
-  { svg_element_id: 'auditorium', name: 'Auditorium', category: 'other' },
-  { svg_element_id: 'center-of-datascience', name: 'Center for Data Science', category: 'academic' },
-  { svg_element_id: 'indoor-stadium', name: 'Indoor Stadium', category: 'sports' },
-  { svg_element_id: 'academic-block', name: 'Academic Block', category: 'academic' },
-  { svg_element_id: 'studentsection', name: 'Student Section', category: 'admin' },
-  { svg_element_id: 'd-block', name: 'D Block', category: 'academic' },
-  { svg_element_id: 'library', name: 'Library', category: 'academic' },
-  { svg_element_id: 'f-block', name: 'F Block', category: 'academic' },
-  { svg_element_id: 'sc-block', name: 'Science Block', category: 'academic' },
-  { svg_element_id: 'eblock', name: 'E Block', category: 'academic' },
-  { svg_element_id: 'garden', name: 'Garden', category: 'gardens' },
-  { svg_element_id: 'unknown1', name: 'Utility Building 1', category: 'other' },
-  { svg_element_id: 'food-court', name: 'Food Court', category: 'cafeteria' },
-  { svg_element_id: 'c-block', name: 'C Block', category: 'academic' },
-  { svg_element_id: 'playground', name: 'Playground', category: 'sports' },
-  { svg_element_id: 'gym', name: 'Gym', category: 'sports' },
-  { svg_element_id: 'drive-ev', name: 'EV Charging Station', category: 'other' },
-  { svg_element_id: 'unknown', name: 'Utility Building 2', category: 'other' }
+  { svg_element_id: 'electronic-office',   name: 'Electronics Office',     category: 'academic',     short_name: 'ELEC OFFICE', hide_label: true },
+  { svg_element_id: 'lh1',                 name: 'Ladies Hostel 1',        category: 'hostel_girls', short_name: 'LH1'          },
+  { svg_element_id: 'lh2',                 name: 'Ladies Hostel 2',        category: 'hostel_girls', short_name: 'LH2'          },
+  { svg_element_id: 'lh3',                 name: 'Ladies Hostel 3',        category: 'hostel_girls', short_name: 'LH3'          },
+  { svg_element_id: 'lh4',                 name: 'Ladies Hostel 4',        category: 'hostel_girls', short_name: 'LH4'          },
+  { svg_element_id: 'lh5',                 name: 'Ladies Hostel 5',        category: 'hostel_girls', short_name: 'LH5'          },
+  { svg_element_id: 'bh1',                 name: 'Boys Hostel 1',          category: 'hostel_boys',  short_name: 'BH1'          },
+  { svg_element_id: 'bh2',                 name: 'Boys Hostel 2',          category: 'hostel_boys',  short_name: 'BH2'          },
+  { svg_element_id: 'bh5',                 name: 'Boys Hostel 5',          category: 'hostel_boys',  short_name: 'BH5'          },
+  { svg_element_id: 'bh6',                 name: 'Boys Hostel 6',          category: 'hostel_boys',  short_name: 'BH6'          },
+  { svg_element_id: 'bh7',                 name: 'Boys Hostel 7',          category: 'hostel_boys',  short_name: 'BH7'          },
+  { svg_element_id: 'bh8',                 name: 'Boys Hostel 8',          category: 'hostel_boys',  short_name: 'BH8'          },
+  { svg_element_id: 'bh9',                 name: 'Boys Hostel 9',          category: 'hostel_boys',  short_name: 'BH9'          },
+  { svg_element_id: 'bh10',                name: 'Boys Hostel 10',         category: 'hostel_boys',  short_name: 'BH10'         },
+  { svg_element_id: 'bh12',                name: 'Boys Hostel 12',         category: 'hostel_boys',  short_name: 'BH12'         },
+  { svg_element_id: 'cricket-court1',      name: 'Cricket Court',          category: 'sports',       short_name: 'CRICKET CRT'  },
+  { svg_element_id: 'football-court1',     name: 'Football Court 1',       category: 'sports',       short_name: 'FOOTBALL 1'   },
+  { svg_element_id: 'football-court2',     name: 'Football Court 2',       category: 'sports',       short_name: 'FOOTBALL 2'   },
+  { svg_element_id: 'auditorium',          name: 'Auditorium',             category: 'other',        short_name: 'AUDITORIUM'   },
+  { svg_element_id: 'center-of-datascience', name: 'Center for Data Science', category: 'academic', short_name: 'DATA SCI'     },
+  { svg_element_id: 'indoor-stadium',      name: 'Indoor Stadium',         category: 'sports',       short_name: 'STADIUM'      },
+  { svg_element_id: 'academic-block',      name: 'Academic Block',         category: 'academic',     short_name: 'ACAD BLOCK'   },
+  { svg_element_id: 'studentsection',      name: 'Student Section',        category: 'admin',        short_name: 'STU SECTION'  },
+  { svg_element_id: 'd-block',             name: 'D Block',                category: 'academic',     short_name: 'D BLOCK'      },
+  { svg_element_id: 'library',             name: 'Library',                category: 'academic',     short_name: 'LIBRARY'      },
+  { svg_element_id: 'f-block',             name: 'F Block',                category: 'academic',     short_name: 'F BLOCK'      },
+  { svg_element_id: 'sc-block',            name: 'Science Block',          category: 'academic',     short_name: 'SC BLOCK'     },
+  { svg_element_id: 'eblock',              name: 'E Block',                category: 'academic',     short_name: 'E BLOCK'      },
+  { svg_element_id: 'garden',              name: 'Garden',                 category: 'gardens',      short_name: 'GARDEN'       },
+  { svg_element_id: 'unknown1',            name: 'Utility Building 1',     category: 'other',        short_name: 'UTIL BLDG 1'  },
+  { svg_element_id: 'food-court',          name: 'Food Court',             category: 'cafeteria',    short_name: 'FOOD COURT'   },
+  { svg_element_id: 'c-block',             name: 'C Block',                category: 'academic',     short_name: 'C BLOCK'      },
+  { svg_element_id: 'playground',          name: 'Playground',             category: 'sports',       short_name: 'PLAYGROUND'   },
+  { svg_element_id: 'gym',                 name: 'Gym',                    category: 'sports',       short_name: 'GYM'          },
+  { svg_element_id: 'drive-ev',            name: 'EV Charging Station',    category: 'other',        short_name: 'EV STATION', hide_label: true },
+  { svg_element_id: 'unknown',             name: 'Utility Building 2',     category: 'other',        short_name: 'UTIL BLDG 2'  },
 ];
 
 async function run() {
@@ -232,11 +232,11 @@ async function run() {
     console.log('Seeding buildings data...');
     for (const b of buildingsData) {
       await dbClient.query(`
-        INSERT INTO buildings (svg_element_id, name, category)
-        VALUES ($1, $2, $3)
+        INSERT INTO buildings (svg_element_id, name, category, short_name, hide_label)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (svg_element_id) DO UPDATE
-        SET name = EXCLUDED.name, category = EXCLUDED.category
-      `, [b.svg_element_id, b.name, b.category]);
+        SET name = EXCLUDED.name, category = EXCLUDED.category, short_name = EXCLUDED.short_name, hide_label = EXCLUDED.hide_label
+      `, [b.svg_element_id, b.name, b.category, b.short_name, b.hide_label || false]);
     }
     console.log('Buildings seeded.');
 

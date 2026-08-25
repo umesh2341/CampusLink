@@ -1,19 +1,27 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Users, MapPin } from 'lucide-react';
+import { X, Calendar, Users, MapPin, Navigation } from 'lucide-react';
 
 const categoryLabels = {
-  academic:     { label: 'Academic',       dot: 'bg-category-academic-fill' },
-  hostel_boys:  { label: 'Boys Hostel',    dot: 'bg-category-boys-hostel-fill' },
-  hostel_girls: { label: 'Girls Hostel',   dot: 'bg-category-girls-hostel-fill' },
-  admin:        { label: 'Admin/Research', dot: 'bg-category-admin-research-fill' },
-  cafeteria:    { label: 'Cafeteria/Food', dot: 'bg-category-cafeteria-food-fill' },
-  sports:       { label: 'Sports',         dot: 'bg-category-sports-fill' },
-  gardens:      { label: 'Gardens',        dot: 'bg-category-gardens-fill' },
-  other:        { label: 'Other/Misc',     dot: 'bg-category-other-misc-fill' },
+  academic: { label: 'Academic', dot: 'bg-category-academic-fill' },
+  hostel_boys: { label: 'Boys Hostel', dot: 'bg-category-boys-hostel-fill' },
+  hostel_girls: { label: 'Girls Hostel', dot: 'bg-category-girls-hostel-fill' },
+  admin: { label: 'Admin/Research', dot: 'bg-category-admin-research-fill' },
+  cafeteria: { label: 'Cafeteria/Food', dot: 'bg-category-cafeteria-food-fill' },
+  sports: { label: 'Sports', dot: 'bg-category-sports-fill' },
+  gardens: { label: 'Gardens', dot: 'bg-category-gardens-fill' },
+  other: { label: 'Other/Misc', dot: 'bg-category-other-misc-fill' },
 };
 
-function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
+const TRANSPORT_OPTIONS = [
+  { id: 'WALK', label: 'Walk', icon: '🚶' },
+  { id: 'BIKE', label: 'Bike', icon: '🏍️' },
+  { id: 'CAR',  label: 'Car',  icon: '🚗' },
+];
+
+function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onStartNavigation }) {
+  const [selectedMode, setSelectedMode] = React.useState('WALK');
+
   if (!building) return null;
 
   const categoryInfo = categoryLabels[building.category] || { label: 'Unknown', dot: 'bg-gray-400' };
@@ -59,31 +67,74 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            transition={{ type: 'tween', duration: 0.2, ease: [0.25, 0.8, 0.25, 1] }}
             className="fixed z-50 bg-paper flex flex-col font-mono
               inset-x-0 bottom-0 top-0
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
           >
             {/* ── Header ── */}
-            <div className="border-b-2 border-ink p-4 flex items-start justify-between bg-card shrink-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 border border-ink/40 ${categoryInfo.dot}`} />
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted">
-                    [ {categoryInfo.label} ]
-                  </span>
+            <div className="border-b-2 border-ink p-4 space-y-3 bg-card shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 border border-ink/40 ${categoryInfo.dot}`} />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted">
+                      [ {categoryInfo.label} ]
+                    </span>
+                  </div>
+                  <h2 className="text-3xl font-display uppercase tracking-tight text-ink leading-tight">
+                    {building.name}
+                  </h2>
                 </div>
-                <h2 className="text-3xl font-display uppercase tracking-tight text-ink leading-tight">
-                  {building.name}
-                </h2>
+                <button
+                  onClick={onClose}
+                  aria-label="Close panel"
+                  className="p-1.5 bg-paper border-2 border-ink text-ink hover:bg-ink hover:text-paper rounded-xs transition-all active:translate-y-[2px] focus:outline-none cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Close panel"
-                className="p-1.5 bg-paper border-2 border-ink text-ink hover:bg-ink hover:text-paper rounded-xs transition-all active:translate-y-[2px] focus:outline-none"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* ── Transport Mode & Start Navigation Action ── */}
+              {onStartNavigation && (
+                <div className="space-y-2 pt-1 border-t border-ink/10">
+                  <div className="space-y-1">
+                    <div className="text-[9px] font-bold text-muted uppercase tracking-widest">
+                      HOW ARE YOU TRAVELLING?
+                    </div>
+                    <div className="flex gap-1.5">
+                      {TRANSPORT_OPTIONS.map((opt) => {
+                        const isSelected = selectedMode === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setSelectedMode(opt.id)}
+                            className={[
+                              'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xs border-2 text-xs font-bold uppercase transition-all duration-150 cursor-pointer active:translate-y-[1px]',
+                              isSelected
+                                ? 'bg-ink text-paper border-ink shadow-hard'
+                                : 'bg-paper text-ink border-ink/30 hover:border-ink hover:shadow-xs',
+                            ].join(' ')}
+                          >
+                            <span className="text-sm leading-none">{opt.icon}</span>
+                            <span className="text-[11px]">{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onStartNavigation(building, selectedMode)}
+                    className="w-full flex items-center justify-center gap-2 bg-signal hover:bg-signal/90 text-ink border-2 border-ink py-2.5 px-4 rounded-xs font-mono text-xs sm:text-sm font-bold uppercase tracking-wider shadow-hard active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                  >
+                    <Navigation className="w-4 h-4 text-ink fill-ink rotate-45" />
+                    <span>START NAVIGATION</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── Content ── */}
@@ -103,10 +154,8 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
                   {events.map((event) => {
                     const locationStr = getLocationString(event.floor, event.room_number);
                     return (
-                      <motion.div
+                      <div
                         key={event.id}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
                         onClick={() => onSelectEvent(event)}
                         className="group cursor-pointer border-2 border-ink p-3.5 rounded-xs bg-card shadow-hard
                                    hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none
@@ -136,7 +185,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent }) {
                             <span>CLUB: <strong className="text-ink">{event.organizing_club}</strong></span>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
