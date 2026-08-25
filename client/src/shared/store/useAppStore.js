@@ -35,6 +35,32 @@ function saveLastViewed(map) {
 }
 
 const useAppStore = create((set, get) => ({
+  // ── Unified Overlay State ─────────────────────────────────
+  /**
+   * Only one primary overlay can be open at a time.
+   * Valid values: 'SIDE_PANEL' | 'NAV_MENU' | 'NOTICE_BOARD' | 'CLUBS' | 'ABOUT' | 'NOTIFICATIONS' | 'PROFILE' | 'FEEDBACK' | 'LOCATION_CONSENT' | 'ALL_EVENTS' | null
+   */
+  activeOverlay: null,
+  
+  /** 
+   * Switch the active overlay, with a 200ms delay to allow the current one to exit.
+   */
+  switchOverlay: (newOverlay) => {
+    const current = get().activeOverlay;
+    if (current && current !== newOverlay && newOverlay !== null) {
+      // Close current overlay to trigger its exit animation
+      set({ activeOverlay: null });
+      // Wait for exit animation (200ms) before opening the new one
+      setTimeout(() => {
+        set({ activeOverlay: newOverlay });
+      }, 200);
+    } else {
+      set({ activeOverlay: newOverlay });
+    }
+  },
+
+  closeOverlay: () => set({ activeOverlay: null }),
+
   // ── Building selection ────────────────────────────────────
   /** The full building object currently selected, or null */
   selectedBuilding: null,
@@ -45,29 +71,29 @@ const useAppStore = create((set, get) => ({
     const current = get().lastViewedMap;
     const updated = { ...current, [building.id]: nowISO };
     saveLastViewed(updated);
+    
+    // Use the smooth transition logic
+    get().switchOverlay('SIDE_PANEL');
+    
     set({
       selectedBuilding: { ...building },
-      isSidePanelOpen: true,
       lastViewedMap: updated,
     });
   },
 
   /** Highlight a building on the map without opening the side panel */
   highlightBuilding: (building) => {
+    get().switchOverlay(null);
     set({
       selectedBuilding: { ...building },
-      isSidePanelOpen: false,
     });
   },
 
   /** Clear the selected building and close the panel */
   clearBuilding: () => {
-    set({ selectedBuilding: null, isSidePanelOpen: false });
+    get().switchOverlay(null);
+    set({ selectedBuilding: null });
   },
-
-  // ── Side panel ────────────────────────────────────────────
-  isSidePanelOpen: false,
-  closeSidePanel: () => set({ isSidePanelOpen: false, selectedBuilding: null }),
 
   // ── Seen/unseen badge state ───────────────────────────────
   /**

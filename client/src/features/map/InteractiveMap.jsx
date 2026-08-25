@@ -13,6 +13,8 @@ function InteractiveMap({
   activeEventsMap,
   lastViewedMap = {},
   userLocation = null,
+  isGpsAcquiring = false,
+  isOffCampus = false,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -21,11 +23,11 @@ function InteractiveMap({
 
   // Read saved map transform state from Zustand store
   const savedZoom = useAppStore(s => s.mapZoom);
-  const savedPan  = useAppStore(s => s.mapPan);
+  const savedPan = useAppStore(s => s.mapPan);
   const setMapTransform = useAppStore(s => s.setMapTransform);
 
   const [zoom, setZoomState] = useState(() => savedZoom ?? 0.25);
-  const [pan, setPanState]   = useState(() => savedPan ?? { x: 0, y: 10 });
+  const [pan, setPanState] = useState(() => savedPan ?? { x: 0, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
 
@@ -45,10 +47,29 @@ function InteractiveMap({
   const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
 
   const MAX_ZOOM = 3.5;
-  const getMinZoom = () => {
+
+  // These multipliers are applied to the initial 'fit to viewport' zoom level
+  // Adjust these to control how far users can zoom out on different devices
+  const MIN_ZOOM_MOBILE = 0.90;
+  const MIN_ZOOM_DESKTOP = 2.4;
+
+  const getFitZoom = () => {
     if (!viewportRef.current) return 0.25;
     const vWidth = viewportRef.current.clientWidth;
-    return Math.max(0.22, vWidth / 1580);
+    const vHeight = viewportRef.current.clientHeight;
+    // Calculate scale to fit width and height, handling the 3D tilt perspective distortion roughly
+    const scaleX = vWidth / 1580;
+    const scaleY = vHeight / 2891;
+    // Use the smaller scale so it fully contains within the viewport, with 5% padding
+    return Math.min(scaleX, scaleY) * 0.95;
+  };
+
+  const getMinZoom = () => {
+    const fitZoom = getFitZoom();
+    const isMobile = window.innerWidth < 768;
+    // Apply the responsive multiplier to give a comfortable overview 
+    // without exposing too much empty background.
+    return fitZoom * (isMobile ? MIN_ZOOM_MOBILE : MIN_ZOOM_DESKTOP);
   };
 
   const updateTransform = (newZoom, newPan) => {
@@ -102,8 +123,16 @@ function InteractiveMap({
   // Initial sizing if no saved transform exists
   useEffect(() => {
     if (viewportRef.current && (savedZoom === null || savedPan === null)) {
-      const fitZoom = getMinZoom();
-      const initialPan = { x: 0, y: 70 };
+      const fitZoom = getFitZoom();
+      // Center the map initially
+      const vWidth = viewportRef.current.clientWidth;
+      const vHeight = viewportRef.current.clientHeight;
+      const mapWidth = 1580 * fitZoom;
+      const mapHeight = 2891 * fitZoom;
+      const initialPan = {
+        x: (vWidth - mapWidth) / 2,
+        y: (vHeight - mapHeight) / 2
+      };
       updateTransform(fitZoom, initialPan);
     }
   }, []);
@@ -244,6 +273,25 @@ function InteractiveMap({
     }
   }, [selectedBuilding]);
 
+  // Initial auto-centering on user position when live location is activated
+  const hasAutoCenteredUserRef = useRef(false);
+  useEffect(() => {
+    if (!userLocation || userLocation.x === null || userLocation.y === null) {
+      hasAutoCenteredUserRef.current = false;
+      return;
+    }
+    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding) {
+      hasAutoCenteredUserRef.current = true;
+      const vp = viewportRef.current;
+      const vpWidth = vp.clientWidth;
+      const vpHeight = vp.clientHeight;
+      const targetZoom = Math.min(MAX_ZOOM, Math.max(0.65, (vpWidth / 1580) * 1.5));
+      const newPanX = vpWidth / 2 - userLocation.x * targetZoom;
+      const newPanY = vpHeight / 2 - userLocation.y * targetZoom;
+      updateTransform(targetZoom, { x: newPanX, y: newPanY });
+    }
+  }, [userLocation, selectedBuilding]);
+
   // Desktop Mouse Drag Handlers
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -340,15 +388,15 @@ function InteractiveMap({
         const ratio = currentDist / pinchStartDistRef.current;
         const minZ = getMinZoom();
         const targetZoom = Math.min(MAX_ZOOM, Math.max(minZ, pinchStartZoomRef.current * ratio));
-        
+
         const rect = viewportRef.current.getBoundingClientRect();
         const midX = pinchCenterRef.current.x - rect.left;
         const midY = pinchCenterRef.current.y - rect.top;
-        
+
         const scaleRatio = targetZoom / pinchStartZoomRef.current;
         const newPanX = midX - (midX - pinchStartPanRef.current.x) * scaleRatio;
         const newPanY = midY - (midY - pinchStartPanRef.current.y) * scaleRatio;
-        
+
         updateTransform(targetZoom, { x: newPanX, y: newPanY });
       }
     }
@@ -458,6 +506,7 @@ function InteractiveMap({
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transition: isInteracting || isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+            willChange: 'transform',
           }}
         >
           {/* Static SVG Map Layer */}
@@ -506,6 +555,7 @@ function InteractiveMap({
                 userName={userLocation.userName || 'YOU'}
                 heading={userLocation.heading}
                 isInsideCampus={userLocation.isInsideCampus}
+                transitionMs={userLocation.transitionMs ?? 1500}
               />
             )}
           </div>
@@ -514,8 +564,30 @@ function InteractiveMap({
 
       {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
       <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">
-        
-        {/* Live GPS Telemetry Pill (when tracking active) */}
+
+        {/* Acquiring GPS Toast — shown while GPS warms up before first valid fix */}
+        {isGpsAcquiring && (
+          <div className="bg-amber-400 border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-ink animate-ping" />
+              <span>ACQUIRING GPS…</span>
+            </div>
+            <div className="text-[7.5px] text-ink/70 font-bold">Move to an open area for better signal</div>
+          </div>
+        )}
+
+        {/* Off-campus Toast — shown when GPS is working but user is outside ITER campus */}
+        {isOffCampus && !isGpsAcquiring && (
+          <div className="bg-card border-2 border-red-500 shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 font-bold text-red-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span>OUTSIDE CAMPUS</span>
+            </div>
+            <div className="text-[7.5px] text-muted font-bold">GPS is active. Return to ITER campus to see your marker.</div>
+          </div>
+        )}
+
+        {/* Live GPS Telemetry Pill (when tracking active and position known) */}
         {userLocation && userLocation.x !== null && userLocation.y !== null && (
           <div className="bg-card border-2 border-ink shadow-hard px-2 py-1 rounded-xs font-mono text-[8px] sm:text-[9px] text-ink space-y-0.5 max-w-[190px] sm:max-w-xs animate-in fade-in duration-200">
             <div className="flex items-center justify-between font-bold text-signal">

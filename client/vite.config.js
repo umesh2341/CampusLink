@@ -27,9 +27,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://campuslinks.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
+      // NOTE: /auth/callback is NOT proxied — Vite SPA fallback serves index.html,
+      // and the Supabase JS client parses the URL hash to extract the session.
     },
   },
 });

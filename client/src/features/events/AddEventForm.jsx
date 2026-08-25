@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import CropImageModal from './CropImageModal';
 import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X, UploadCloud, Trash2 } from 'lucide-react';
 import { API_BASE } from '../../shared/lib/api';

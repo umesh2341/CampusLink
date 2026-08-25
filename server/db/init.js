@@ -205,7 +205,8 @@ async function run() {
       VALUES ('11111111-2222-3333-4444-555555555555', 'student@iter.soa.ac.in', 'John Doe', 'student')
       ON CONFLICT (id) DO NOTHING;
     `);
-    console.log('Profiles table ensured.');
+    await dbClient.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
+    console.log('Profiles columns ensured.');
 
     // Create user_locations table (requires profiles)
     await dbClient.query(`
