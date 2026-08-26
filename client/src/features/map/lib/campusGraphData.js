@@ -195,6 +195,7 @@ export const CAMPUS_EDGES = [
   { from: 'N_ROAD_SOUTH_5',        to: 'N_ROAD_SOUTH_6',       access: 'BOTH' },
   { from: 'N_ROAD_SOUTH_6',        to: 'N_BH8_ENTRANCE',       access: 'WALK' },
   { from: 'N_ROAD_SOUTH_4',        to: 'N_ROAD_SOUTH_7',       access: 'WALK' },
+  { from: 'N_ROAD_SOUTH_5',        to: 'N_ROAD_SOUTH_7',       access: 'BOTH' },
   { from: 'N_ROAD_SOUTH_5',        to: 'N_ROAD_SOUTH_8',       access: 'BOTH' },
   { from: 'N_ROAD_SOUTH_7',        to: 'N_BH12_ENTRANCE',      access: 'WALK' },
   { from: 'N_ROAD_SOUTH_8',        to: 'N_BH5_ENTRANCE',       access: 'WALK' },
