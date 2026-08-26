@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusLink Red Bull Tracking — Calibration Studio</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #131b2e;
+      --border: #23304d;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #e11d48;
+      --accent-glow: rgba(225, 29, 72, 0.2);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-family: var(--mono);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      font-family: var(--mono);
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    input, textarea {
+      background: #0b1120;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      outline: none;
+      width: 100%;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    button:hover {
+      background: #334155;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    button.primary:hover {
+      background: #be123c;
+    }
+    .metrics-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .metric {
+      background: #0b1120;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 6px;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .metric-val {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin-top: 4px;
+    }
+    pre {
+      background: #0b1120;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow-x: auto;
+      color: #38bdf8;
+      max-height: 240px;
+    }
+    .quality-good { color: var(--success); }
+    .quality-mod { color: var(--warning); }
+    .quality-poor { color: var(--accent); }
+    .tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .tag-err {
+      background: rgba(225, 29, 72, 0.2);
+      color: #fb7185;
+    }
+    .test-box {
+      margin-top: 16px;
+      background: #0b1120;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span>CAMPUSLINK</span>
+      <span class="badge">Red Bull GPS Calibration</span>
+    </h1>
+    <div style="font-size: 12px; color: var(--muted);">
+      Target Map: <strong>ITER Campus (1580 x 2891 px)</strong>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>
+        <span>Reference Control Anchors (GCPs)</span>
+        <span id="pointCountBadge" style="font-size: 12px; color: var(--muted); font-weight: normal;">0 points</span>
+      </h2>
+      <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px;">
+        <table id="pointsTable">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Landmark</th>
+              <th style="width: 22%;">Latitude</th>
+              <th style="width: 22%;">Longitude</th>
+              <th style="width: 13%;">SVG X</th>
+              <th style="width: 13%;">SVG Y</th>
+              <th style="width: 5%;"></th>
+            </tr>
+          </thead>
+          <tbody id="pointsBody"></tbody>
+        </table>
+      </div>
+      <div class="btn-row">
+        <button onclick="addRow()">+ Add Anchor</button>
+        <button onclick="loadSampleIterData()">Load ITER Campus Anchors</button>
+        <button onclick="clearAllRows()">Clear All</button>
+        <button class="primary" onclick="runCalibration()">Calculate Calibration</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Calibration Quality & Coefficients</h2>
+        <div class="metrics-box">
+          <div class="metric">
+            <div class="metric-label">Quality</div>
+            <div class="metric-val" id="metricQuality">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">RMSE (Error)</div>
+            <div class="metric-val" id="metricRmse">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Max Error</div>
+            <div class="metric-val" id="metricMax">--</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--muted);">
+            Generated Affine Matrix JSON (Ready for Viewer Config)
+          </div>
+          <pre id="jsonOutput">Ready for calibration</pre>
+          <button style="margin-top: 8px;" onclick="copyJsonSnippet()">Copy Configuration JSON</button>
+        </div>
+
+        <div class="test-box">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Quick Point Conversion Test</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;">
+            <input id="testLat" type="number" step="0.000001" placeholder="Latitude (e.g. 20.249472)">
+            <input id="testLng" type="number" step="0.000001" placeholder="Longitude (e.g. 85.800603)">
+            <button onclick="testConvert()">Convert</button>
+          </div>
+          <div id="testResult" style="margin-top: 8px; font-family: var(--mono); font-size: 12px; color: #38bdf8;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px;">
+        <h2>Residual Error Breakdown</h2>
+        <div style="max-height: 240px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Landmark</th>
+                <th>Actual (X,Y)</th>
+                <th>Predicted (X,Y)</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="residualBody">
+              <tr><td colspan="4" style="color: var(--muted); text-align: center;">Run calibration to view residuals</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { solveAffineCalibration } from './calibrationSolver.js';
+
+    const SAMPLE_ANCHORS = [
+      { name: 'LH-5 North Gate', lat: 20.250620, lng: 85.801050, x: 676, y: 48 },
+      { name: 'BH-7 North-West', lat: 20.250403, lng: 85.800364, x: 389, y: 138 },
+      { name: 'BH-2 North', lat: 20.250319, lng: 85.800819, x: 590, y: 180 },
+      { name: 'BH-1 North', lat: 20.249985, lng: 85.800832, x: 572, y: 366 },
+      { name: 'Admin / Academic Block', lat: 20.249472, lng: 85.800603, x: 437, y: 650 },
+      { name: 'Centre for Data Science', lat: 20.249447, lng: 85.801393, x: 869, y: 614 },
+      { name: 'Football Court 1', lat: 20.249177, lng: 85.801115, x: 709, y: 766 },
+      { name: 'Auditorium', lat: 20.249192, lng: 85.801627, x: 941, y: 794 },
+      { name: 'C-Block', lat: 20.248795, lng: 85.801163, x: 716, y: 961 },
+      { name: 'SC-Block Complex', lat: 20.248375, lng: 85.801274, x: 764, y: 1177 },
+      { name: 'F-Block', lat: 20.248446, lng: 85.801871, x: 1053, y: 1213 },
+      { name: 'Food Court Plaza', lat: 20.248166, lng: 85.802406, x: 1337, y: 1308 },
+      { name: 'E-Block', lat: 20.247555, lng: 85.801300, x: 871, y: 1485 },
+      { name: 'Cricket Ground', lat: 20.247594, lng: 85.800515, x: 394, y: 1614 },
+      { name: 'LH-4 South-West', lat: 20.247100, lng: 85.800700, x: 583, y: 1836 },
+      { name: 'LH-3 South', lat: 20.246450, lng: 85.801350, x: 847, y: 2143 },
+      { name: 'BH-5 / BH-8 Hostels', lat: 20.245800, lng: 85.802300, x: 1302, y: 2436 },
+      { name: 'BH-9 South Gate', lat: 20.245450, lng: 85.802400, x: 1451, y: 2637 },
+      { name: 'Football Court 2 South', lat: 20.245050, lng: 85.802100, x: 1344, y: 2830 },
+    ];
+
+    let currentResult = null;
+
+    window.addRow = function(data = { name: '', lat: '', lng: '', x: '', y: '' }) {
+      const tbody = document.getElementById('pointsBody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" class="pt-name" value="${data.name || ''}" placeholder="Landmark"></td>
+        <td><input type="number" step="0.000001" class="pt-lat" value="${data.lat !== '' ? data.lat : ''}" placeholder="Lat"></td>
+        <td><input type="number" step="0.000001" class="pt-lng" value="${data.lng !== '' ? data.lng : ''}" placeholder="Lng"></td>
+        <td><input type="number" class="pt-x" value="${data.x !== '' ? data.x : ''}" placeholder="X"></td>
+        <td><input type="number" class="pt-y" value="${data.y !== '' ? data.y : ''}" placeholder="Y"></td>
+        <td><button style="padding: 4px 8px; color: #ef4444;" onclick="this.closest('tr').remove(); updatePointCount();">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+      updatePointCount();
+    };
+
+    window.loadSampleIterData = function() {
+      document.getElementById('pointsBody').innerHTML = '';
+      SAMPLE_ANCHORS.forEach(p => window.addRow(p));
+      window.runCalibration();
+    };
+
+    window.clearAllRows = function() {
+      document.getElementById('pointsBody').innerHTML = '';
+      updatePointCount();
+    };
+
+    function updatePointCount() {
+      const count = document.querySelectorAll('#pointsBody tr').length;
+      document.getElementById('pointCountBadge').innerText = `${count} points`;
+    }
+
+    function collectPoints() {
+      const rows = document.querySelectorAll('#pointsBody tr');
+      const points = [];
+      rows.forEach(r => {
+        const name = r.querySelector('.pt-name').value.trim();
+        const lat = parseFloat(r.querySelector('.pt-lat').value);
+        const lng = parseFloat(r.querySelector('.pt-lng').value);
+        const x = parseFloat(r.querySelector('.pt-x').value);
+        const y = parseFloat(r.querySelector('.pt-y').value);
+
+        if (!isNaN(lat) && !isNaN(lng) && !isNaN(x) && !isNaN(y)) {
+          points.push({ name: name || 'Point', lat, lng, x, y });
+        }
+      });
+      return points;
+    }
+
+    window.runCalibration = function() {
+      const points = collectPoints();
+      const result = solveAffineCalibration(points);
+      currentResult = result;
+
+      if (!result.success) {
+        alert(result.error);
+        return;
+      }
+
+      const qEl = document.getElementById('metricQuality');
+      qEl.innerText = result.metrics.quality;
+      qEl.className = 'metric-val ' + (result.metrics.quality === 'EXCELLENT' ? 'quality-good' : (result.metrics.quality === 'GOOD' ? 'quality-good' : (result.metrics.quality === 'MODERATE' ? 'quality-mod' : 'quality-poor')));
+
+      document.getElementById('metricRmse').innerText = `${result.metrics.rmse}px`;
+      document.getElementById('metricMax').innerText = `${result.metrics.maxErrorPx}px`;
+
+      document.getElementById('jsonOutput').innerText = result.exportSnippet;
+
+      const resBody = document.getElementById('residualBody');
+      resBody.innerHTML = '';
+      result.residuals.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.name}</td>
+          <td>(${r.actualX}, ${r.actualY})</td>
+          <td>(${r.predictedX}, ${r.predictedY})</td>
+          <td><span class="tag tag-err">${r.totalErrorPx}px</span></td>
+        `;
+        resBody.appendChild(tr);
+      });
+    };
+
+    window.copyJsonSnippet = function() {
+      if (!currentResult || !currentResult.exportSnippet) {
+        alert('Please run calibration first.');
+        return;
+      }
+      navigator.clipboard.writeText(currentResult.exportSnippet).then(() => {
+        alert('Configuration JSON copied to clipboard!');
+      });
+    };
+
+    window.testConvert = function() {
+      if (!currentResult || !currentResult.coefficients) {
+        alert('Please run calibration first.');
+        return;
+      }
+      const lat = parseFloat(document.getElementById('testLat').value);
+      const lng = parseFloat(document.getElementById('testLng').value);
+      if (isNaN(lat) || isNaN(lng)) {
+        alert('Please enter valid test lat and lng.');
+        return;
+      }
+      const { a, b, c, d, e, f } = currentResult.coefficients;
+      const x = Math.round(a * lng + b * lat + c);
+      const y = Math.round(d * lng + e * lat + f);
+      document.getElementById('testResult').innerText = `Calculated SVG Canvas: X = ${x}, Y = ${y}`;
+    };
+
+    window.loadSampleIterData();
+  </script>
+</body>
+</html>

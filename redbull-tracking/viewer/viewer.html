@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CampusLink — Live Red Bull Vehicle Radar</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --redbull-red: #e11d48;
+      --redbull-yellow: #facc15;
+      --redbull-blue: #1e3a8a;
+      --mono: 'JetBrains Mono', Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+    .hud-panel {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--redbull-yellow);
+      background: rgba(250, 204, 21, 0.1);
+      border: 1px solid var(--redbull-yellow);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+    .badge-orange { background: rgba(249, 115, 22, 0.15); color: #f97316; border: 1px solid #f97316; }
+    .badge-red { background: rgba(225, 29, 72, 0.15); color: #e11d48; border: 1px solid #e11d48; }
+    .map-stage {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #090e17;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .svg-container {
+      position: relative;
+      width: 1580px;
+      height: 2891px;
+      transform-origin: top left;
+    }
+    .map-svg-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1580px;
+      height: 2891px;
+      pointer-events: none;
+    }
+    .vehicle-marker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      z-index: 40;
+      display: none;
+      pointer-events: none;
+    }
+    .vehicle-anchor {
+      position: relative;
+      transform: translate(-50%, -50%);
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .vehicle-pulse {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(225, 29, 72, 0.3);
+      animation: carPulse 2s infinite ease-out;
+    }
+    @keyframes carPulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .car-body {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      background: #0f172a;
+      border: 2px solid var(--redbull-yellow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(225, 29, 72, 0.8);
+      z-index: 5;
+    }
+    .car-pointer {
+      position: absolute;
+      top: -8px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 10px solid var(--redbull-yellow);
+    }
+    .bottom-card {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-transform: uppercase;
+      font-family: var(--mono);
+    }
+    .btn-primary { background: var(--redbull-red); color: #fff; }
+    .btn-danger { background: #334155; color: #f87171; }
+    .nav-route-anim {
+      animation: dash 1.5s linear infinite;
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -24; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="hud-panel">
+      <span class="brand-tag">Red Bull Live</span>
+      <span id="statusBadge" class="badge badge-amber">CONNECTING...</span>
+    </div>
+    <div class="hud-panel">
+      <div style="font-size: 12px; font-family: var(--mono);">
+        Speed: <strong id="speedText" style="color: var(--redbull-yellow);">0.0 km/h</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-stage" id="mapViewport">
+    <div class="svg-container" id="mapContainer">
+      <img src="../../client/src/assets/campus-map.svg" class="map-svg-img" alt="Campus Map" />
+
+      <svg style="position: absolute; top:0; left:0; width:1580px; height:2891px; pointer-events:none; z-index: 30;">
+        <circle id="accuracyCircle" cx="0" cy="0" r="20" fill="rgba(225, 29, 72, 0.12)" stroke="rgba(225, 29, 72, 0.4)" stroke-width="2" stroke-dasharray="6 4" style="display: none;" />
+        <g id="routeLayer"></g>
+      </svg>
+
+      <div id="vehicleMarker" class="vehicle-marker">
+        <div class="vehicle-anchor">
+          <div class="vehicle-pulse"></div>
+          <div id="vehicleHeading" class="car-body" style="transition: transform 0.1s linear;">
+            <div class="car-pointer"></div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 11.2 2 11.7 2 12.2V16c0 .6.4 1 1 1h2" />
+              <circle cx="7" cy="17" r="2" />
+              <path d="M9 17h6" />
+              <circle cx="17" cy="17" r="2" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+      <div>
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 700; letter-spacing: 0.05em;">Current Sector</div>
+        <div id="landmarkText" style="font-size: 15px; font-weight: 800; color: #fff;">Searching Campus Radar...</div>
+      </div>
+      <button id="btnNavigate" class="btn btn-primary">Take Me To Car</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: var(--mono); color: var(--muted);">
+      <span>Telemetry: <span id="updatedTimeText" style="color: #cbd5e1;">--</span></span>
+      <span id="navDetails" style="display: none; color: #38bdf8; font-weight: 700;"></span>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initViewer } from './viewer.js';
+    initViewer();
+  </script>
+</body>
+</html>
