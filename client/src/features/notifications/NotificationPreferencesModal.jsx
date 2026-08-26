@@ -276,10 +276,10 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
                             <img
                               src={club.logo_url}
                               alt={club.name}
-                              className="w-7 h-7 rounded-xs border border-ink object-cover"
+                              className="w-7 h-7 rounded-full border border-ink object-cover"
                             />
                           ) : (
-                            <div className="w-7 h-7 rounded-xs border border-ink bg-ink text-paper flex items-center justify-center font-display text-xs font-bold">
+                            <div className="w-7 h-7 rounded-full border border-ink bg-ink text-paper flex items-center justify-center font-display text-xs font-bold">
                               {club.name.substring(0, 2).toUpperCase()}
                             </div>
                           )}

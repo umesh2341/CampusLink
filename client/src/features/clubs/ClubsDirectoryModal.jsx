@@ -151,7 +151,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
                       <img
                         src={club.logo_url}
                         alt={club.name}
-                        className="w-11 h-11 rounded-xs border-2 border-ink bg-paper object-cover shrink-0"
+                        className="w-11 h-11 rounded-full border-2 border-ink bg-paper object-cover shrink-0"
                         onError={(e) => {
                           e.target.src =
                             'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=160';
