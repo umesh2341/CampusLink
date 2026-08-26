@@ -11,6 +11,8 @@ function NavMenuDrawer({
   onOpenAddNotice,
   isOrganizer,
   isCoAdmin,
+  isAdmin,
+  onOpenAdminRequests,
 }) {
   const menuItems = [
     {
@@ -57,6 +59,20 @@ function NavMenuDrawer({
       badge: 'V2.0',
     },
   ];
+
+  if (isAdmin) {
+    menuItems.push({
+      id: 'admin_requests',
+      label: 'Admin Requests',
+      description: 'Review role requests',
+      icon: ExternalLink,
+      onClick: () => {
+        onClose();
+        if (onOpenAdminRequests) onOpenAdminRequests();
+      },
+      badge: 'ADMIN',
+    });
+  }
 
   if (isCoAdmin) {
     menuItems.unshift({

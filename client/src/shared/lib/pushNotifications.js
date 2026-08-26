@@ -17,7 +17,7 @@ export function urlBase64ToUint8Array(base64String) {
 /**
  * Register Service Worker and Subscribe to Push Notifications
  */
-export async function subscribeUserToPush() {
+export async function subscribeUserToPush(userId = null) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     throw new Error('Push messaging is not supported in this browser.');
   }
@@ -28,8 +28,11 @@ export async function subscribeUserToPush() {
     throw new Error('Notification permission denied by user.');
   }
 
-  // Wait for the service worker registered by vite-plugin-pwa to be ready
-  const registration = await navigator.serviceWorker.ready;
+  // Wait for the service worker with a timeout so it doesn't hang forever
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Service Worker registration timed out. Ensure you are on a trusted origin (localhost or HTTPS).')), 5000))
+  ]);
 
   // Fetch VAPID public key from backend
   const keyRes = await fetch(`${API_BASE}/api/push/vapid-public-key`);
@@ -54,6 +57,7 @@ export async function subscribeUserToPush() {
     body: JSON.stringify({
       endpoint: subJson.endpoint,
       keys: subJson.keys,
+      userId,
     }),
   });
 

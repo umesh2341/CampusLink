@@ -89,9 +89,11 @@ export const getClubs = async (req, res) => {
       return res.json(fallbackClubs);
     }
 
-    // Merge database records with fallback metadata if optional columns are null
+    // Merge database records with fallback metadata if optional columns are null.
+    // social_handles is a JSONB column in the live DB (may contain instagram, discord keys).
     const enriched = rows.map(r => {
       const fb = fallbackClubs.find(f => f.name.toLowerCase() === r.name.toLowerCase()) || {};
+      const handles = r.social_handles || {};
       return {
         id: r.id,
         name: r.name,
@@ -99,8 +101,8 @@ export const getClubs = async (req, res) => {
         description: r.description || fb.description || 'Active student organization at ITER, SOA University.',
         logo_url: r.logo_url || fb.logo_url || 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=160',
         banner_url: r.banner_url || fb.banner_url || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-        instagram: r.instagram || fb.instagram || `${r.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-        discord: r.discord || fb.discord || null,
+        instagram: handles.instagram || r.instagram || fb.instagram || null,
+        discord: handles.discord || r.discord || fb.discord || null,
         lead_name: r.lead_name || fb.lead_name || 'Club Lead',
       };
     });

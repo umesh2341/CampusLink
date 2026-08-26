@@ -64,8 +64,10 @@ export const createEvent = async (req, res) => {
     auto_approve,
   } = req.body;
 
-  // Basic validation
-  if (!title || !description || !start_time || !end_time || !building_id || !club_id || !organizing_club) {
+  // Basic validation — club_id is optional (nullable FK); organizer_name is required when club_id is absent
+  const hasClubId = club_id && club_id !== 'null';
+  const hasOrganizerName = organizing_club && organizing_club.trim().length > 0;
+  if (!title || !description || !start_time || !end_time || !building_id || (!hasClubId && !hasOrganizerName)) {
     return res.status(400).json({ error: 'Missing required event fields' });
   }
 
@@ -104,8 +106,8 @@ export const createEvent = async (req, res) => {
       start_time,
       end_time,
       resolvedBuildingId,
-      club_id,
-      organizing_club,
+      hasClubId ? club_id : null,
+      organizing_club || null,
       image_url || null,
       registration_url || null,
       floor || null,

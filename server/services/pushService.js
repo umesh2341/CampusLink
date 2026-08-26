@@ -14,6 +14,27 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   }
 }
 
+export const sendPushNotification = async (sub, payloadObj) => {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+  const pushSubscription = {
+    endpoint: sub.endpoint,
+    keys: {
+      p256dh: sub.p256dh_key,
+      auth: sub.auth_key,
+    },
+  };
+  try {
+    await webpush.sendNotification(pushSubscription, JSON.stringify(payloadObj));
+  } catch (err) {
+    if (err.statusCode === 410 || err.statusCode === 404) {
+      console.log(`Cleaning up expired push endpoint: ${sub.endpoint}`);
+      await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]);
+    } else {
+      console.error(`Push notification failed for endpoint ${sub.endpoint}:`, err.message);
+    }
+  }
+};
+
 export const dispatchEventPushNotification = async (event) => {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     console.warn('VAPID keys not configured. Skipping push notification dispatch.');
