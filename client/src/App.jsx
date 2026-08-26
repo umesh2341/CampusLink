@@ -281,8 +281,13 @@ function AppContent() {
     }
   };
 
-  /** Search result: department or building tap — highlight on map AND open side panel for navigation */
-  const handleSelectBuildingFromSearch = (building) => selectBuilding(building);
+  /**
+   * Search result: building or department tap.
+   * HIGHLIGHT ONLY — do NOT call selectBuilding() or any panel-opening logic here.
+   * Only a direct click on the building shape on the map should open the side panel.
+   * Using highlightBuilding() sets selectedBuilding (map glow) without triggering the overlay.
+   */
+  const handleSelectBuildingFromSearch = (building) => highlightBuilding(building);
 
   /** Search result: event tap — highlight building on map and open event pass modal ONLY (without side panel) */
   const handleSelectEventFromSearch = (building, event) => {
