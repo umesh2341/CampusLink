@@ -139,7 +139,7 @@ async function run() {
     `);
     console.log('Notices table ensured.');
 
-    // Seed buildings
+    // ── BUILDINGS (safe upsert, always runs) ───────────────────────────────
     console.log('Seeding buildings data...');
     for (const b of buildingsData) {
       await dbClient.query(`
@@ -151,18 +151,24 @@ async function run() {
     }
     console.log('Buildings seeded.');
 
-    // Fetch seeded buildings to link events
+    // ── EVENTS & DEPARTMENTS SAMPLE DATA ────────────────────────────────────
+    // PRODUCTION GUARD: sample/dummy data is NEVER inserted in production.
+    // To run this locally for dev setup: NODE_ENV=development node server/db/init.js
+    // Never call this file automatically from a build or start command.
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️  NODE_ENV=production detected — skipping all sample data seeding. Real data is preserved.');
+      return;
+    }
+
+    // Fetch buildings to link events (dev/local only beyond this point)
     const buildingsRes = await dbClient.query('SELECT id, svg_element_id FROM buildings');
     const buildingsMap = {};
     buildingsRes.rows.forEach(row => {
       buildingsMap[row.svg_element_id] = row.id;
     });
 
-    // Clear existing seeded events to prevent duplicates on multiple runs
-    await dbClient.query('DELETE FROM events');
-    console.log('Cleared existing events.');
-
-    // Seed sample events on 6 distinct buildings
+    // Seed sample events — uses ON CONFLICT DO NOTHING so existing real data is never overwritten
+    console.log('Seeding sample events (dev only)...');
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
@@ -274,11 +280,11 @@ async function run() {
       }
     ];
 
-    console.log('Seeding sample events...');
     for (const e of sampleEvents) {
       await dbClient.query(`
         INSERT INTO events (title, description, start_time, end_time, building_id, organizing_club, image_url, registration_url, floor, room_number, is_approved)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT DO NOTHING
       `, [e.title, e.description, e.start_time, e.end_time, e.building_id, e.organizing_club, e.image_url, e.registration_url, e.floor || null, e.room_number || null, e.is_approved]);
     }
 
@@ -350,14 +356,14 @@ async function run() {
       }
     ];
 
-    console.log('Seeding departments data...');
-    await dbClient.query('DELETE FROM departments');
+    console.log('Seeding departments data (dev only)...');
     for (const d of departmentsData) {
       const buildingId = buildingsMap[d.svg_element_id];
       if (buildingId) {
         await dbClient.query(`
           INSERT INTO departments (name, building_id, floor, room_number, aliases)
           VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (name, building_id, floor) DO NOTHING
         `, [d.name, buildingId, d.floor, d.room_number, d.aliases]);
       }
     }

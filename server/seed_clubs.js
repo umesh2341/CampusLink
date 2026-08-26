@@ -2,6 +2,13 @@ import 'dotenv/config';
 import pool from './db/pool.js';
 
 async function seedClubs() {
+  // PRODUCTION GUARD: this script must NEVER run automatically in production.
+  // Run manually only for local dev: NODE_ENV=development node server/seed_clubs.js
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ ABORTED: seed_clubs.js refused to run in NODE_ENV=production. Real production data is preserved.');
+    process.exit(1);
+  }
+
   try {
     console.log('Seeding initial campus clubs into database...');
 
