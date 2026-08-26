@@ -247,6 +247,7 @@ export const BUILDING_ENTRANCE_MAP = {
   'gym':                   'N_GYM_ENTRANCE',
   'drive-ev':              'N_DRIVE_EV',
   'unknown':               'N_UTIL_2',
+  'G-block':               'N_SC_BLOCK',
 };
 
 // ── 4. GRAPH ADJACENCY MATRIX BUILDER ──────────────────────────────────────────
