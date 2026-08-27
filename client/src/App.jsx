@@ -34,6 +34,7 @@ import LocationConsentModal from './features/map/LocationConsentModal';
 import NoticeBanner from './features/notices/NoticeBanner';
 import NoticeBoardModal from './features/notices/NoticeBoardModal';
 import UpdatePrompt from './shared/components/UpdatePrompt';
+import RedBullViewerModal from './features/map/RedBullViewerModal.jsx';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 const AddNoticeForm = lazy(() => import('./features/notices/AddNoticeForm'));
@@ -81,6 +82,9 @@ function AppContent() {
   const isCoAdmin = profile?.role === 'authority' || profile?.role === 'admin';
   
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
+  const [redBullVehicleState, setRedBullVehicleState] = useState(null);
+  const [isRedBullModalOpen,  setIsRedBullModalOpen]  = useState(false);
+  const [customRedBullRoute,  setCustomRedBullRoute]  = useState(null);
   const [isNoticeBannerDismissed, setIsNoticeBannerDismissed] = useState(
     () => sessionStorage.getItem('notices_dismissed') === 'true'
   );
@@ -625,13 +629,19 @@ function AppContent() {
             userLocation={userLocation}
             isGpsAcquiring={isGpsAcquiring}
             isOffCampus={isOffCampus}
-            route={activeRoute}
-            navigationStatus={navigationStatus}
+            route={customRedBullRoute || activeRoute}
+            navigationStatus={customRedBullRoute ? 'active' : navigationStatus}
             navigationError={navigationError}
-            onStopNavigation={stopNavigation}
-            destinationBuilding={navDestination}
+            onStopNavigation={() => {
+              setCustomRedBullRoute(null);
+              stopNavigation();
+            }}
+            destinationBuilding={customRedBullRoute ? { name: 'Red Bull Car', svg_element_id: null } : navDestination}
             transportMode={transportMode}
             onSetTransportMode={setTransportMode}
+            onSelectRedBull={() => setIsRedBullModalOpen(true)}
+            redBullVehicleState={redBullVehicleState}
+            onRedBullStateUpdate={setRedBullVehicleState}
           />
         ) : currentView === 'addEvent' ? (
           <Suspense fallback={
@@ -877,7 +887,17 @@ function AppContent() {
         error={locationError}
       />
 
-
+      {/* ── Red Bull Live Radar Modal ── */}
+      <RedBullViewerModal
+        isOpen={isRedBullModalOpen}
+        onClose={() => setIsRedBullModalOpen(false)}
+        vehicleState={redBullVehicleState}
+        userLocation={userLocation}
+        onStartNavigation={(route) => {
+          setIsRedBullModalOpen(false);
+          setCustomRedBullRoute(route);
+        }}
+      />
 
       {/* ── About Modal ── */}
       <AnimatePresence>

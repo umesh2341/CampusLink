@@ -3,6 +3,7 @@ import { LocateFixed, Plus, Minus, Type } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
 import LiveUserMarker from './LiveUserMarker';
+import RedBullMapMarker from './RedBullMapMarker';
 import NavigationRouteLayer from './components/NavigationRouteLayer';
 import NavigationHUD from './components/NavigationHUD';
 import { buildingCoords } from '../../shared/lib/buildingCoords';
@@ -24,6 +25,9 @@ function InteractiveMap({
   destinationBuilding = null,
   transportMode = 'WALK',
   onSetTransportMode = null,
+  onSelectRedBull = null,
+  redBullVehicleState = null,
+  onRedBullStateUpdate = null,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -592,6 +596,12 @@ function InteractiveMap({
                 transitionMs={userLocation.transitionMs ?? 1500}
               />
             )}
+
+            {/* Live Red Bull Vehicle Marker */}
+            <RedBullMapMarker
+              onClick={onSelectRedBull}
+              onVehicleStateUpdate={onRedBullStateUpdate}
+            />
           </div>
           {/* Lowered the zoom threshold from 0.55 to 0.25 so labels stay visible longer when zoomed out */}
           {showLabels && zoom >= 0.25 && (
@@ -733,6 +743,19 @@ function InteractiveMap({
         )}
 
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Red Bull Radar Button */}
+          {redBullVehicleState && (
+            <button
+              type="button"
+              onClick={() => onSelectRedBull && onSelectRedBull(redBullVehicleState)}
+              title="Open Red Bull Live Radar"
+              className="flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-bold uppercase bg-slate-900/95 hover:bg-slate-800 text-yellow-400 border-2 border-yellow-400 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs shadow-hard active:translate-y-[1px] active:shadow-none transition-all cursor-pointer whitespace-nowrap"
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span>RED BULL RADAR</span>
+            </button>
+          )}
+
           {/* Center On Me Button */}
           {userLocation && userLocation.x !== null && userLocation.y !== null && (
             <button

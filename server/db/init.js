@@ -79,15 +79,27 @@ async function run() {
     await dbClient.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
     console.log('pgcrypto extension ensured.');
 
-    // Create buildings table
+    // Ensure buildings table and columns
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS buildings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         svg_element_id VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
-        category VARCHAR(50) NOT NULL
-      )
+        category VARCHAR(50)
+      );
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS short_name VARCHAR(50);
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS hide_label BOOLEAN DEFAULT FALSE;
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS type VARCHAR(50);
     `);
+
+    try {
+      await dbClient.query(`ALTER TABLE buildings ALTER COLUMN type DROP NOT NULL;`);
+    } catch (e) {}
+    try {
+      await dbClient.query(`ALTER TABLE buildings ALTER COLUMN category DROP NOT NULL;`);
+    } catch (e) {}
+
     console.log('Buildings table ensured.');
 
     // Create events table
@@ -100,16 +112,19 @@ async function run() {
         end_time TIMESTAMP WITH TIME ZONE NOT NULL,
         building_id UUID REFERENCES buildings(id) ON DELETE CASCADE NOT NULL,
         club_id UUID REFERENCES clubs(id) ON DELETE SET NULL,
-        organizing_club VARCHAR(255) NOT NULL,
+        organizing_club VARCHAR(255),
         image_url VARCHAR(1000),
         registration_url VARCHAR(1000),
         floor TEXT,
         room_number TEXT,
         is_approved BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-      )
+      );
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS organizing_club VARCHAR(255);
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_url VARCHAR(1000);
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
     `);
-    await dbClient.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;`);
     // Create departments table
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS departments (
@@ -143,10 +158,10 @@ async function run() {
     console.log('Seeding buildings data...');
     for (const b of buildingsData) {
       await dbClient.query(`
-        INSERT INTO buildings (svg_element_id, name, category, short_name, hide_label)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO buildings (svg_element_id, name, category, type, short_name, hide_label)
+        VALUES ($1, $2, $3, $3, $4, $5)
         ON CONFLICT (svg_element_id) DO UPDATE
-        SET name = EXCLUDED.name, category = EXCLUDED.category, short_name = EXCLUDED.short_name, hide_label = EXCLUDED.hide_label
+        SET name = EXCLUDED.name, category = EXCLUDED.category, type = EXCLUDED.type, short_name = EXCLUDED.short_name, hide_label = EXCLUDED.hide_label
       `, [b.svg_element_id, b.name, b.category, b.short_name, b.hide_label || false]);
     }
     console.log('Buildings seeded.');
@@ -175,16 +190,16 @@ async function run() {
 
     const sampleEvents = [
       {
-        title: 'HackSOA 2026 Hackathon',
-        description: 'Iterate, build, and pitch your ideas in this 24-hour hackathon. Great prizes and networking opportunities await!',
+        title: 'Red Bull Event 2026 — Live Campus Tracking',
+        description: 'Club Nexus (I7) presents the Red Bull Event 2026 live vehicle tracking experience. Watch the Red Bull car move across campus in real time on the CampusLink map, powered by our own GPS telemetry system built in-house.',
         start_time: now,
         end_time: tomorrow,
-        building_id: buildingsMap['electronic-office'],
-        organizing_club: 'Coding Club',
-        image_url: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-        registration_url: 'https://forms.gle/hacksoa2026',
-        floor: '3rd Floor',
-        room_number: 'Room 302',
+        building_id: buildingsMap['auditorium'],
+        organizing_club: 'Club Nexus (I7)',
+        image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
+        registration_url: 'https://campuslink.in/rdbullevent_26/console',
+        floor: null,
+        room_number: null,
         is_approved: true
       },
       {

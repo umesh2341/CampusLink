@@ -1,250 +1,224 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
-import { createAffineTransformer } from '../lib/affineTransform.js';
-import { createVehicleInterpolator } from '../lib/interpolator.js';
+import { createAffineTransformer }       from '../lib/affineTransform.js';
+import { createVehicleInterpolator }     from '../lib/interpolator.js';
 import { createSemanticLocationResolver } from '../lib/semanticLocation.js';
-import { calculateRouteToCar } from '../lib/routingBridge.js';
 
+// placeholder coefficients — run calibration_page.html against real landmarks before the event
 const DEFAULT_COEFFICIENTS = {
-  a: 478863.683905,
+  a:  478863.683905,
   b: -19596.875341,
   c: -40689501.705,
-  d: 3693.35968,
+  d:  3693.35968,
   e: -499077.146284,
-  f: 9789781.4823,
+  f:  9789781.4823,
 };
 
 export function initViewer(customConfig = {}) {
-  let supabase = null;
-  let realtimeChannel = null;
-  let animationFrameId = null;
+  let supabase      = null;
+  let rtChannel     = null;
+  let animFrameId   = null;
 
-  const coefficients = customConfig.coefficients || DEFAULT_COEFFICIENTS;
-  const transformer = createAffineTransformer(coefficients);
+  const coeffs       = customConfig.coefficients || DEFAULT_COEFFICIENTS;
+  const transformer  = createAffineTransformer(coeffs);
   const interpolator = createVehicleInterpolator();
-  const semanticResolver = createSemanticLocationResolver();
+  const semantic     = createSemanticLocationResolver();
 
-  let userSimulatedLocation = { x: 437, y: 650 };
-  let currentActiveRoute = null;
+  // default user position (Academic Block entrance) — updated via setUserLocation if GPS available
+  let userPos      = { x: 437, y: 650 };
+  let activeRoute  = null;
 
-  const elements = {
-    mapViewport: document.getElementById('mapViewport'),
-    mapContainer: document.getElementById('mapContainer'),
-    vehicleMarker: document.getElementById('vehicleMarker'),
+  const el = {
+    mapViewport:    document.getElementById('mapViewport'),
+    mapContainer:   document.getElementById('mapContainer'),
+    vehicleMarker:  document.getElementById('vehicleMarker'),
     vehicleHeading: document.getElementById('vehicleHeading'),
-    accuracyCircle: document.getElementById('accuracyCircle'),
-    routeLayer: document.getElementById('routeLayer'),
-    statusBadge: document.getElementById('statusBadge'),
-    landmarkText: document.getElementById('landmarkText'),
-    speedText: document.getElementById('speedText'),
-    updatedTimeText: document.getElementById('updatedTimeText'),
-    btnNavigate: document.getElementById('btnNavigate'),
-    navDetails: document.getElementById('navDetails'),
+    accCircle:      document.getElementById('accuracyCircle'),
+    routeLayer:     document.getElementById('routeLayer'),
+    statusBadge:    document.getElementById('statusBadge'),
+    landmarkText:   document.getElementById('landmarkText'),
+    speedText:      document.getElementById('speedText'),
+    timeText:       document.getElementById('updatedTimeText'),
+    btnNav:         document.getElementById('btnNavigate'),
+    navDetails:     document.getElementById('navDetails'),
   };
 
-  function setupSupabase() {
-    const url = customConfig.supabaseUrl ||
-      document.getElementById('cfgSupabaseUrl')?.value?.trim() ||
-      new URLSearchParams(window.location.search).get('url');
+  function connect() {
+    const url = customConfig.supabaseUrl
+      || document.getElementById('cfgSupabaseUrl')?.value?.trim()
+      || new URLSearchParams(window.location.search).get('url');
 
-    const key = customConfig.supabaseKey ||
-      document.getElementById('cfgSupabaseKey')?.value?.trim() ||
-      new URLSearchParams(window.location.search).get('key');
+    const key = customConfig.supabaseKey
+      || document.getElementById('cfgSupabaseKey')?.value?.trim()
+      || new URLSearchParams(window.location.search).get('key');
 
     if (!url || !key) return;
 
-    if (realtimeChannel) {
-      realtimeChannel.unsubscribe();
-      realtimeChannel = null;
-    }
+    if (rtChannel) { rtChannel.unsubscribe(); rtChannel = null; }
 
-    supabase = createClient(url, key, {
-      auth: { persistSession: false },
-    });
-
-    fetchInitialState();
-    subscribeRealtime();
+    supabase = createClient(url, key, { auth: { persistSession: false } });
+    fetchInitial();
+    subscribeRT();
   }
 
-  async function fetchInitialState() {
+  async function fetchInitial() {
     if (!supabase) return;
     try {
+      // try the public view first — it excludes secret_token_hash
       const { data, error } = await supabase
         .from('redbull_car_live')
         .select('*')
         .eq('device_label', 'REDBULL_CAR_01')
         .maybeSingle();
 
-      if (error) {
-        const fallbackRes = await supabase
-          .from('redbull_car_telemetry')
-          .select('latitude, longitude, accuracy, altitude, heading, speed, updated_at')
-          .eq('device_label', 'REDBULL_CAR_01')
-          .maybeSingle();
+      if (!error && data) { onTelemetry(data); return; }
 
-        if (fallbackRes.data) {
-          processIncomingTelemetry(fallbackRes.data);
-        }
-        return;
-      }
-
-      if (data) {
-        processIncomingTelemetry(data);
-      }
-    } catch (err) {
-      console.error('Initial state fetch error:', err.message);
-    }
+      // fallback to direct table if view hasn't been created yet
+      const fb = await supabase
+        .from('redbull_car_telemetry')
+        .select('latitude, longitude, accuracy, altitude, heading, speed, updated_at')
+        .eq('device_label', 'REDBULL_CAR_01')
+        .maybeSingle();
+      if (fb.data) onTelemetry(fb.data);
+    } catch (_e) {}
   }
 
-  function subscribeRealtime() {
+  function subscribeRT() {
     if (!supabase) return;
 
-    realtimeChannel = supabase
+    rtChannel = supabase
       .channel('redbull-telemetry-live')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'redbull_car_telemetry',
-          filter: 'device_label=eq.REDBULL_CAR_01',
-        },
-        (payload) => {
-          if (payload.new) {
-            processIncomingTelemetry(payload.new);
-          }
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          updateStatusUI('LIVE');
-        } else if (status === 'CHANNEL_ERROR') {
-          updateStatusUI('OFFLINE');
-        }
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'redbull_car_telemetry',
+        filter: 'device_label=eq.REDBULL_CAR_01',
+      }, payload => {
+        if (payload.new) onTelemetry(payload.new);
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED')    setStatus('LIVE');
+        if (status === 'CHANNEL_ERROR') setStatus('OFFLINE');
       });
   }
 
-  function processIncomingTelemetry(row) {
-    if (!row || typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
-      return;
-    }
+  function onTelemetry(row) {
+    if (!row || typeof row.latitude !== 'number' || typeof row.longitude !== 'number') return;
 
-    const { x, y, accuracyRadiusPixels } = transformer.toMapCoordinates(
-      row.latitude,
-      row.longitude,
-      row.accuracy
+    const { x, y, accuracyRadiusPixels: accR } = transformer.toMapCoordinates(
+      row.latitude, row.longitude, row.accuracy
     );
-
     if (x === null || y === null) return;
 
     interpolator.setTarget({
-      x: x,
-      y: y,
-      heading: row.heading !== null && row.heading !== undefined ? Number(row.heading) : null,
-      accuracyRadius: accuracyRadiusPixels,
-      speed: row.speed !== null && row.speed !== undefined ? Number(row.speed) : 0,
-      accuracy: row.accuracy !== null && row.accuracy !== undefined ? Number(row.accuracy) : null,
-      updatedAt: row.updated_at || Date.now(),
+      x, y,
+      heading:       row.heading  != null ? Number(row.heading)  : null,
+      accuracyRadius: accR,
+      speed:          row.speed   != null ? Number(row.speed)    : 0,
+      accuracy:       row.accuracy != null ? Number(row.accuracy) : null,
+      updatedAt:      row.updated_at || Date.now(),
     });
 
-    const semantic = semanticResolver.resolveLocation(x, y);
-    elements.landmarkText.innerText = semantic.description;
-    elements.speedText.innerText = row.speed ? `${(row.speed * 3.6).toFixed(1)} km/h` : '0.0 km/h';
-    elements.updatedTimeText.innerText = new Date(row.updated_at || Date.now()).toLocaleTimeString();
+    const loc = semantic.resolveLocation(x, y);
+    el.landmarkText.innerText = loc.description;
+    el.speedText.innerText    = row.speed ? `${(row.speed * 3.6).toFixed(1)} km/h` : '0.0 km/h';
+    el.timeText.innerText     = new Date(row.updated_at || Date.now()).toLocaleTimeString();
 
-    if (currentActiveRoute) {
-      recalculateRoute({ x, y });
-    }
+    // keep route line pointing at the car if nav is active
+    if (activeRoute) drawRoute({ x, y });
   }
 
   function renderLoop() {
     const state = interpolator.update();
 
-    if (state && elements.vehicleMarker) {
-      elements.vehicleMarker.style.transform = `translate(${state.x}px, ${state.y}px)`;
-      elements.vehicleMarker.style.display = 'block';
+    if (state && el.vehicleMarker) {
+      el.vehicleMarker.style.transform = `translate(${state.x}px, ${state.y}px)`;
+      el.vehicleMarker.style.display   = 'block';
 
-      if (elements.vehicleHeading) {
-        elements.vehicleHeading.style.transform = `rotate(${state.heading}deg)`;
+      if (el.vehicleHeading) el.vehicleHeading.style.transform = `rotate(${state.heading}deg)`;
+
+      if (el.accCircle) {
+        el.accCircle.setAttribute('cx', state.x);
+        el.accCircle.setAttribute('cy', state.y);
+        el.accCircle.setAttribute('r',  Math.max(12, state.accuracyRadius));
+        el.accCircle.style.display = 'block';
       }
 
-      if (elements.accuracyCircle) {
-        elements.accuracyCircle.setAttribute('cx', state.x);
-        elements.accuracyCircle.setAttribute('cy', state.y);
-        elements.accuracyCircle.setAttribute('r', Math.max(12, state.accuracyRadius));
-        elements.accuracyCircle.style.display = 'block';
-      }
-
-      updateStatusUI(state.status);
+      setStatus(state.status);
     }
 
-    animationFrameId = requestAnimationFrame(renderLoop);
+    animFrameId = requestAnimationFrame(renderLoop);
   }
 
-  function updateStatusUI(status) {
-    if (!elements.statusBadge) return;
-
-    elements.statusBadge.innerText = status;
-    elements.statusBadge.className = 'badge ' + (
-      status === 'LIVE' ? 'badge-green' :
-      status === 'WEAK_GPS' ? 'badge-amber' :
-      status === 'DELAYED' ? 'badge-orange' : 'badge-red'
+  function setStatus(s) {
+    if (!el.statusBadge) return;
+    el.statusBadge.innerText  = s;
+    el.statusBadge.className  = 'badge ' + (
+      s === 'LIVE'     ? 'badge-green'  :
+      s === 'WEAK_GPS' ? 'badge-amber'  :
+      s === 'DELAYED'  ? 'badge-orange' : 'badge-red'
     );
   }
 
-  function recalculateRoute(carPoint) {
-    const routeRes = calculateRouteToCar(userSimulatedLocation, carPoint);
-    if (routeRes.status === 'active' && routeRes.route) {
-      currentActiveRoute = routeRes.route;
-      if (elements.routeLayer) {
-        elements.routeLayer.innerHTML = `
-          <path d="${routeRes.route.svgPathD}" fill="none" stroke="#e11d48" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 10" class="nav-route-anim" />
-          <path d="${routeRes.route.svgPathD}" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-        `;
-      }
-      if (elements.navDetails) {
-        elements.navDetails.innerText = `Walking Route: ${routeRes.route.distanceMeters}m (${routeRes.route.estimatedMinutes} min walk)`;
-        elements.navDetails.style.display = 'block';
-      }
+  function drawRoute(carPt) {
+    const dx      = carPt.x - userPos.x;
+    const dy      = carPt.y - userPos.y;
+    const distPx  = Math.hypot(dx, dy);
+    const dist    = Math.max(5, Math.round(distPx / 4.6));
+    const eta     = Math.max(1, Math.ceil(dist / 75));
+    const path    = `M ${userPos.x} ${userPos.y} L ${carPt.x} ${carPt.y}`;
+
+    activeRoute = { path, dist, eta };
+
+    if (el.routeLayer) {
+      el.routeLayer.innerHTML =
+        `<path d="${path}" fill="none" stroke="#e11d48" stroke-width="8"
+               stroke-linecap="round" stroke-linejoin="round"
+               stroke-dasharray="14 10" class="nav-route-anim"/>` +
+        `<path d="${path}" fill="none" stroke="#fff"   stroke-width="4"
+               stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    if (el.navDetails) {
+      el.navDetails.innerText      = `Straight-line: ${dist}m (~${eta} min walk)`;
+      el.navDetails.style.display  = 'block';
     }
   }
 
-  function toggleNavigation() {
-    const currentState = interpolator.getCurrentState();
-    if (!currentState) {
-      alert('Vehicle location not available yet.');
-      return;
-    }
+  function clearRoute() {
+    activeRoute = null;
+    if (el.routeLayer)  el.routeLayer.innerHTML    = '';
+    if (el.navDetails)  el.navDetails.style.display = 'none';
+  }
 
-    if (currentActiveRoute) {
-      currentActiveRoute = null;
-      if (elements.routeLayer) elements.routeLayer.innerHTML = '';
-      if (elements.navDetails) elements.navDetails.style.display = 'none';
-      elements.btnNavigate.innerText = 'Navigate To Car';
-      elements.btnNavigate.className = 'btn btn-primary';
+  function toggleNav() {
+    const state = interpolator.getCurrentState();
+    if (!state) { alert('Vehicle location not available yet.'); return; }
+
+    if (activeRoute) {
+      clearRoute();
+      el.btnNav.innerText  = 'Navigate To Car';
+      el.btnNav.className  = 'btn btn-primary';
     } else {
-      recalculateRoute({ x: currentState.x, y: currentState.y });
-      elements.btnNavigate.innerText = 'Stop Navigation';
-      elements.btnNavigate.className = 'btn btn-danger';
+      drawRoute({ x: state.x, y: state.y });
+      el.btnNav.innerText  = 'Stop Navigation';
+      el.btnNav.className  = 'btn btn-danger';
     }
   }
 
-  if (elements.btnNavigate) {
-    elements.btnNavigate.addEventListener('click', toggleNavigation);
-  }
+  if (el.btnNav) el.btnNav.addEventListener('click', toggleNav);
 
-  setupSupabase();
-  animationFrameId = requestAnimationFrame(renderLoop);
+  connect();
+  animFrameId = requestAnimationFrame(renderLoop);
 
   return {
     destroy: () => {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (realtimeChannel) realtimeChannel.unsubscribe();
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      if (rtChannel)   rtChannel.unsubscribe();
     },
-    pushTelemetryManual: (data) => processIncomingTelemetry(data),
+    pushTelemetry: (data) => onTelemetry(data),
     setUserLocation: (pt) => {
-      userSimulatedLocation = pt;
+      userPos = pt;
       const cur = interpolator.getCurrentState();
-      if (cur && currentActiveRoute) recalculateRoute(cur);
+      if (cur && activeRoute) drawRoute(cur);
     },
   };
 }
