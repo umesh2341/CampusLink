@@ -4,18 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="robots" content="noindex, nofollow">
-  <title>CampusLink — Red Bull Car Transmitter</title>
+  <title>Red Bull Live Tracker</title>
   <style>
     :root {
-      --bg: #05070c;
-      --card: #0d131f;
+      --bg: #07090e;
+      --card: #0f172a;
       --border: #1e293b;
       --text: #f8fafc;
-      --muted: #64748b;
-      --accent: #dc2626;
-      --accent-glow: rgba(220, 38, 38, 0.3);
+      --muted: #94a3b8;
+      --red: #e11d48;
       --green: #10b981;
-      --green-glow: rgba(16, 185, 129, 0.2);
       --amber: #f59e0b;
       --mono: 'JetBrains Mono', Consolas, Menlo, monospace;
     }
@@ -24,23 +22,24 @@
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      padding: 16px;
+      padding: 24px 16px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      max-width: 440px;
+      margin: 0 auto;
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     .title {
       font-size: 15px;
       font-weight: 800;
-      letter-spacing: -0.02em;
       text-transform: uppercase;
       display: flex;
       align-items: center;
@@ -50,84 +49,50 @@
       font-size: 10px;
       font-weight: 700;
       font-family: var(--mono);
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 4px;
       text-transform: uppercase;
     }
-    .badge-green { background: var(--green-glow); color: var(--green); border: 1px solid var(--green); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid var(--green); }
     .badge-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid var(--amber); }
-    .badge-red   { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent); }
+    .badge-red   { background: rgba(225, 29, 72, 0.15); color: var(--red); border: 1px solid var(--red); }
     .badge-muted { background: #1e293b; color: var(--muted); border: 1px solid var(--border); }
     .pulse { animation: pulse 1.8s infinite; }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: 0.5; }
+      50% { opacity: 0.5; }
     }
-    .cockpit {
+    .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 16px;
     }
-    .cockpit-card {
+    .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 14px;
     }
-    .cockpit-label {
+    .label {
       font-size: 10px;
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
-    .cockpit-val {
-      font-size: 20px;
+    .val {
+      font-size: 22px;
       font-weight: 800;
       font-family: var(--mono);
       color: #fff;
     }
-    .cockpit-val-sm { font-size: 14px; }
-    .config-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 16px;
-    }
-    .config-card h2 {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-    .input-group { margin-bottom: 10px; }
-    .input-group label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-    input {
-      width: 100%;
-      background: #05070c;
-      border: 1px solid var(--border);
-      color: #fff;
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      outline: none;
-    }
-    input:focus { border-color: var(--accent); }
+    .val-sm { font-size: 13px; word-break: break-all; }
     .btn {
       width: 100%;
-      padding: 14px;
-      border-radius: 8px;
+      padding: 16px;
+      border-radius: 10px;
       font-size: 14px;
       font-weight: 800;
       text-transform: uppercase;
@@ -138,25 +103,27 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 16px;
     }
-    .btn-primary   { background: #e11d48; color: white; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35); }
-    .btn-danger    { background: #27272a; color: #ef4444; border: 1px solid #ef4444; }
-    .btn-secondary { background: #1e293b; color: var(--text); font-size: 12px; padding: 10px; }
-    .error-banner {
-      background: rgba(220, 38, 38, 0.15);
-      border: 1px solid var(--accent);
-      color: #fca5a5;
-      padding: 10px 12px;
-      border-radius: 6px;
+    .btn-primary { background: var(--red); color: white; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35); }
+    .btn-danger { background: #1e293b; color: #f87171; border: 1px solid #ef4444; }
+    .banner {
+      padding: 12px 14px;
+      border-radius: 8px;
       font-size: 12px;
       font-family: var(--mono);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       display: none;
+      line-height: 1.4;
     }
-    .footer-stats {
+    .banner-err {
+      background: rgba(220, 38, 38, 0.15);
+      border: 1px solid var(--red);
+      color: #fca5a5;
+    }
+    .footer {
       margin-top: auto;
-      padding-top: 12px;
+      padding-top: 14px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -170,7 +137,7 @@
   <div class="header">
     <div class="title">
       <span style="color: #e11d48;">&#9679;</span>
-      <span>Red Bull Car Transmitter</span>
+      <span>Red Bull Car Tracker</span>
     </div>
     <div style="display: flex; gap: 6px;">
       <span id="wakeLockBadge" class="badge badge-muted">WakeLock: OFF</span>
@@ -178,190 +145,169 @@
     </div>
   </div>
 
-  <div id="errorLog" class="error-banner"></div>
+  <div id="errorLog" class="banner banner-err"></div>
 
-  <div class="cockpit">
-    <div class="cockpit-card">
-      <div class="cockpit-label">Speed</div>
-      <div class="cockpit-val" id="statSpeed">--</div>
+  <div class="grid">
+    <div class="card">
+      <div class="label">GPS Accuracy</div>
+      <div class="val" id="statAccuracy">--</div>
     </div>
-    <div class="cockpit-card">
-      <div class="cockpit-label">Heading</div>
-      <div class="cockpit-val" id="statHeading">--</div>
+    <div class="card">
+      <div class="label">Updates Sent</div>
+      <div class="val" id="statSentCount">0</div>
     </div>
-    <div class="cockpit-card">
-      <div class="cockpit-label">GPS Accuracy</div>
-      <div class="cockpit-val" id="statAccuracy">--</div>
-    </div>
-    <div class="cockpit-card">
-      <div class="cockpit-label">Packets Sent</div>
-      <div class="cockpit-val" id="statSentCount">0</div>
-    </div>
-    <div class="cockpit-card" style="grid-column: span 2;">
-      <div class="cockpit-label">Current Geolocation (Lat, Lng)</div>
-      <div class="cockpit-val cockpit-val-sm">
+    <div class="card" style="grid-column: span 2;">
+      <div class="label">Live Coordinates (Lat, Lng)</div>
+      <div class="val val-sm">
         <span id="statLat">0.0000000</span>, <span id="statLng">0.0000000</span>
       </div>
     </div>
   </div>
 
-  <button id="btnToggle" class="btn btn-primary">Start Live Transmission</button>
-  <button id="btnManualPulse" class="btn btn-secondary">Send Single Manual Pulse</button>
+  <button id="btnToggle" class="btn btn-primary">Start Live Tracking</button>
 
-  <div class="config-card">
-    <h2>Transmitter Settings</h2>
-    <div class="input-group">
-      <label>Device Label</label>
-      <input type="text" id="deviceLabel" value="REDBULL_CAR_01">
-    </div>
-    <div class="input-group">
-      <label>Tracker Secret Token</label>
-      <input type="password" id="secretToken" placeholder="Enter vehicle secret token">
-    </div>
-    <div class="input-group">
-      <label>Supabase URL</label>
-      <input type="text" id="supabaseUrl" placeholder="https://xyz.supabase.co">
-    </div>
-    <div class="input-group">
-      <label>Supabase Anon Key</label>
-      <input type="password" id="supabaseKey" placeholder="eyJhbGciOi...">
-    </div>
-  </div>
-
-  <div class="footer-stats">
+  <div class="footer">
     <span>Last Pulse: <strong id="statLastSent" style="color: #fff;">--</strong></span>
-    <span>Club Nexus (I7) &mdash; CampusLink</span>
+    <span>CampusLink &mdash; Club Nexus (I7)</span>
   </div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 
-    // persist creds across reloads so the operator doesn't have to retype on refresh
-    const CONFIG_KEY = 'redbull_tracker_auth_config';
+    const SUPABASE_URL = 'https://aovketvcxpzyrqxqcgkn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_AlVLXjgpsr3E73r4MyM1Hg_w8Yj6KHx';
+    const DEVICE_LABEL = 'REDBULL_CAR_01';
 
-    function loadStoredConfig() {
-      try {
-        const raw = localStorage.getItem(CONFIG_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
-    function saveConfig(cfg) {
-      try {
-        localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
-      } catch {}
-    }
-
-    let supabase  = null;
-    let watchId   = null;
-    let wakeLock  = null;
+    let watchId = null;
+    let wakeLock = null;
     let isTracking = false;
-    let lastSentAt = 0;
-    let sendCount  = 0;
+    let lastSent = 0;
+    let sentCount = 0;
+    let lastPos = null;
 
-    // shorthand refs — avoids repeated getElementById calls everywhere
-    const ui = {
-      url:       document.getElementById('supabaseUrl'),
-      key:       document.getElementById('supabaseKey'),
-      secret:    document.getElementById('secretToken'),
-      label:     document.getElementById('deviceLabel'),
-      btnToggle: document.getElementById('btnToggle'),
-      btnPulse:  document.getElementById('btnManualPulse'),
-      status:    document.getElementById('statusBadge'),
-      wakeLock:  document.getElementById('wakeLockBadge'),
-      lat:       document.getElementById('statLat'),
-      lng:       document.getElementById('statLng'),
-      accuracy:  document.getElementById('statAccuracy'),
-      speed:     document.getElementById('statSpeed'),
-      heading:   document.getElementById('statHeading'),
-      count:     document.getElementById('statSentCount'),
-      lastSent:  document.getElementById('statLastSent'),
-      errorLog:  document.getElementById('errorLog'),
+    const el = {
+      btn: document.getElementById('btnToggle'),
+      status: document.getElementById('statusBadge'),
+      wakeLock: document.getElementById('wakeLockBadge'),
+      lat: document.getElementById('statLat'),
+      lng: document.getElementById('statLng'),
+      acc: document.getElementById('statAccuracy'),
+      count: document.getElementById('statSentCount'),
+      lastSent: document.getElementById('statLastSent'),
+      err: document.getElementById('errorLog'),
     };
 
-    // fill from localStorage first, then URL params can override (useful for QR-code pre-fill)
-    const stored = loadStoredConfig();
-    if (stored) {
-      if (stored.supabaseUrl) ui.url.value    = stored.supabaseUrl;
-      if (stored.supabaseKey) ui.key.value    = stored.supabaseKey;
-      if (stored.secretToken) ui.secret.value = stored.secretToken;
-      if (stored.deviceLabel) ui.label.value  = stored.deviceLabel;
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('url')) ui.url.value = params.get('url');
-    if (params.get('key')) ui.key.value = params.get('key');
-
-    async function acquireWakeLock() {
-      if (!('wakeLock' in navigator)) {
-        ui.wakeLock.innerText = 'WakeLock: UNSUP.';
-        ui.wakeLock.className = 'badge badge-muted';
-        return;
-      }
+    async function setWakeLock() {
+      if (!('wakeLock' in navigator)) return;
       try {
         wakeLock = await navigator.wakeLock.request('screen');
-        ui.wakeLock.innerText = 'WakeLock: ACTIVE';
-        ui.wakeLock.className = 'badge badge-green';
+        el.wakeLock.innerText = 'WakeLock: ON';
+        el.wakeLock.className = 'badge badge-green';
         wakeLock.addEventListener('release', () => {
-          ui.wakeLock.innerText = 'WakeLock: RELEASED';
-          ui.wakeLock.className = 'badge badge-amber';
+          el.wakeLock.innerText = 'WakeLock: OFF';
+          el.wakeLock.className = 'badge badge-amber';
         });
       } catch {
-        ui.wakeLock.innerText = 'WakeLock: FAILED';
-        ui.wakeLock.className = 'badge badge-red';
+        el.wakeLock.innerText = 'WakeLock: ERR';
+        el.wakeLock.className = 'badge badge-red';
       }
     }
 
-    // re-acquire if the tab comes back into focus mid-tracking (e.g. operator checks another app)
-    document.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible' && isTracking) {
-        await acquireWakeLock();
-      }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isTracking) setWakeLock();
     });
 
-    async function startTracking() {
-      const url    = ui.url.value.trim();
-      const key    = ui.key.value.trim();
-      const secret = ui.secret.value.trim();
-      const device = ui.label.value.trim() || 'REDBULL_CAR_01';
+    function calcHeading(lat1, lon1, lat2, lon2) {
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const y = Math.sin(dLon) * Math.cos((lat2 * Math.PI) / 180);
+      const x = Math.cos((lat1 * Math.PI) / 180) * Math.sin((lat2 * Math.PI) / 180) - Math.sin((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.cos(dLon);
+      return Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
+    }
 
-      if (!url || !key || !secret) {
-        showError('Please fill in Supabase URL, Anon Key, and Tracker Secret.');
-        return;
+    async function onPosition(pos) {
+      const c = pos.coords;
+      const lat = c.latitude;
+      const lng = c.longitude;
+      const acc = Math.round(c.accuracy || 15);
+      
+      let heading = c.heading !== null && !isNaN(c.heading) && c.heading >= 0 ? Math.round(c.heading) : null;
+      if (heading === null && lastPos) {
+        heading = calcHeading(lastPos.lat, lastPos.lng, lat, lng);
       }
+      lastPos = { lat, lng };
 
-      saveConfig({ supabaseUrl: url, supabaseKey: key, secretToken: secret, deviceLabel: device });
+      el.lat.innerText = lat.toFixed(7);
+      el.lng.innerText = lng.toFixed(7);
+      el.acc.innerText = `\u00b1${acc}m`;
 
+      el.status.innerText = isTracking ? 'TRANSMITTING' : 'READY';
+      el.status.className = isTracking ? 'badge badge-green pulse' : 'badge badge-amber';
+
+      if (!isTracking) return;
+      if (Date.now() - lastSent < 1100) return;
+
+      await sendUpdate({ lat, lng, acc, heading, altitude: c.altitude, isActive: true });
+    }
+
+    async function sendUpdate(data) {
       try {
-        supabase = createClient(url, key, { auth: { persistSession: false } });
-      } catch (err) {
-        showError('Failed to connect to Supabase: ' + err.message);
-        return;
-      }
+        const { data: res, error } = await supabase.rpc('upsert_redbull_location', {
+          p_device_label: DEVICE_LABEL,
+          p_secret_token: 'redbull2026',
+          p_latitude: data.lat,
+          p_longitude: data.lng,
+          p_accuracy: data.acc,
+          p_altitude: data.altitude || null,
+          p_heading: data.heading || null,
+          p_speed: null,
+          p_is_active: data.isActive !== false,
+        });
 
+        if (error) throw new Error(error.message);
+        if (res && res.success === false) throw new Error(res.error || 'Server error');
+
+        if (data.isActive !== false) {
+          lastSent = Date.now();
+          sentCount++;
+          el.count.innerText = sentCount;
+          el.lastSent.innerText = new Date().toLocaleTimeString();
+        }
+        el.err.style.display = 'none';
+      } catch (e) {
+        el.err.innerText = `Error: ${e.message}`;
+        el.err.style.display = 'block';
+      }
+    }
+
+    function start() {
       if (!navigator.geolocation) {
-        showError('Geolocation API not available in this browser.');
+        el.err.innerText = 'Geolocation not supported.';
+        el.err.style.display = 'block';
         return;
       }
 
       isTracking = true;
-      ui.btnToggle.innerText = 'Stop Live Transmission';
-      ui.btnToggle.className = 'btn btn-danger';
-      ui.status.innerText    = 'TRANSMITTING';
-      ui.status.className    = 'badge badge-green pulse';
+      el.btn.innerText = 'Stop Live Tracking';
+      el.btn.className = 'btn btn-danger';
+      el.err.style.display = 'none';
 
-      await acquireWakeLock();
+      setWakeLock();
 
       watchId = navigator.geolocation.watchPosition(
-        onGpsSuccess,
-        onGpsError,
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        onPosition,
+        (err) => {
+          el.err.innerText = 'GPS Error: ' + err.message;
+          el.err.style.display = 'block';
+          el.status.innerText = 'GPS ERR';
+          el.status.className = 'badge badge-red';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
 
-    function stopTracking() {
+    async function stop() {
       isTracking = false;
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -371,107 +317,21 @@
         wakeLock.release().catch(() => {});
         wakeLock = null;
       }
-      ui.btnToggle.innerText = 'Start Live Transmission';
-      ui.btnToggle.className = 'btn btn-primary';
-      ui.status.innerText    = 'STANDBY';
-      ui.status.className    = 'badge badge-muted';
-    }
+      el.btn.innerText = 'Start Live Tracking';
+      el.btn.className = 'btn btn-primary';
+      el.status.innerText = 'STANDBY';
+      el.status.className = 'badge badge-muted';
 
-    async function onGpsSuccess(pos) {
-      if (!isTracking) return;
-
-      const c       = pos.coords;
-      const lat     = c.latitude;
-      const lng     = c.longitude;
-      const acc     = c.accuracy;
-      const speed   = (c.speed !== null && c.speed >= 0)                       ? c.speed   : null;
-      const heading = (c.heading !== null && !isNaN(c.heading) && c.heading >= 0) ? c.heading : null;
-
-      ui.lat.innerText      = lat.toFixed(7);
-      ui.lng.innerText      = lng.toFixed(7);
-      ui.accuracy.innerText = `\u00b1${Math.round(acc)}m`;
-      ui.speed.innerText    = speed   !== null ? `${(speed * 3.6).toFixed(1)} km/h` : '--';
-      ui.heading.innerText  = heading !== null ? `${Math.round(heading)}\u00b0`      : '--';
-
-      // flag weak signal but keep transmitting — the operator needs visibility
-      if (acc > 90) {
-        ui.status.innerText = 'WEAK GPS';
-        ui.status.className = 'badge badge-amber';
-      } else {
-        ui.status.innerText = 'TRANSMITTING';
-        ui.status.className = 'badge badge-green pulse';
-      }
-
-      // throttle to one write per 1.2 s max — GPS can fire much faster than that
-      if (Date.now() - lastSentAt < 1200) return;
-
-      await transmit({ latitude: lat, longitude: lng, accuracy: acc, altitude: c.altitude, heading, speed });
-    }
-
-    function onGpsError(err) {
-      const msgs = {
-        1: 'Location permission denied by user.',
-        2: 'GPS signal unavailable — move outdoors.',
-        3: 'GPS timed out. Retrying...',
-      };
-      showError(msgs[err.code] || 'GPS Error: ' + err.message);
-      ui.status.innerText = 'GPS ERROR';
-      ui.status.className = 'badge badge-red';
-    }
-
-    async function transmit(data) {
-      if (!supabase) return;
-
-      const secret = ui.secret.value.trim();
-      const device = ui.label.value.trim() || 'REDBULL_CAR_01';
-
-      try {
-        const { data: res, error } = await supabase.rpc('upsert_redbull_location', {
-          p_device_label: device,
-          p_secret_token: secret,
-          p_latitude:     data.latitude,
-          p_longitude:    data.longitude,
-          p_accuracy:     data.accuracy,
-          p_altitude:     data.altitude,
-          p_heading:      data.heading,
-          p_speed:        data.speed,
-        });
-
-        if (error)           throw new Error(error.message);
-        if (res && !res.success) throw new Error(res.error || 'Server rejected the update');
-
-        lastSentAt = Date.now();
-        sendCount++;
-        ui.count.innerText    = sendCount;
-        ui.lastSent.innerText = new Date().toLocaleTimeString();
-        clearError();
-      } catch (err) {
-        showError(`Transmission Failed: ${err.message}`);
+      if (lastPos) {
+        await sendUpdate({ lat: lastPos.lat, lng: lastPos.lng, acc: 15, isActive: false });
       }
     }
 
-    function showError(msg) {
-      ui.errorLog.style.display = 'block';
-      ui.errorLog.innerText     = msg;
+    el.btn.addEventListener('click', () => isTracking ? stop() : start());
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(onPosition, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
     }
-
-    function clearError() {
-      ui.errorLog.style.display = 'none';
-      ui.errorLog.innerText     = '';
-    }
-
-    ui.btnToggle.addEventListener('click', () => {
-      isTracking ? stopTracking() : startTracking();
-    });
-
-    ui.btnPulse.addEventListener('click', () => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 0,
-      });
-    });
   </script>
 </body>
 </html>

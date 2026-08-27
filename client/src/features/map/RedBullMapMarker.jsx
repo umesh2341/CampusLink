@@ -5,12 +5,12 @@ import { createVehicleInterpolator } from './lib/redbullInterpolator.js';
 import { createSemanticLocationResolver } from './lib/redbullSemantic.js';
 
 const DEFAULT_COEFFICIENTS = {
-  a: 478863.683905,
-  b: -19596.875341,
-  c: -40689501.705,
-  d: 3693.35968,
-  e: -499077.146284,
-  f: 9789781.4823,
+  a: 219288.63099,
+  b: -57261.336773,
+  c: -17656337.4824,
+  d: -380247.152371,
+  e: -655855.147215,
+  f: 45968556.9891
 };
 
 function RedBullMapMarker({
@@ -30,42 +30,34 @@ function RedBullMapMarker({
 
   useEffect(() => {
     if (!supabase) return;
-
     let isMounted = true;
+    let pollTimer = null;
 
-    async function fetchLatestTelemetry() {
+    async function fetchLatest() {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('redbull_car_live')
           .select('*')
           .eq('device_label', 'REDBULL_CAR_01')
           .maybeSingle();
 
-        if (error) {
-          const fallback = await supabase
-            .from('redbull_car_telemetry')
-            .select('latitude, longitude, accuracy, altitude, heading, speed, updated_at')
-            .eq('device_label', 'REDBULL_CAR_01')
-            .maybeSingle();
-
-          if (fallback.data && isMounted) {
-            handleTelemetryUpdate(fallback.data);
-          }
-          return;
+        if (data && data.is_active && data.seconds_since_update < 45 && isMounted) {
+          handleUpdate(data);
+        } else if (isMounted && (!data || !data.is_active || data.seconds_since_update >= 45)) {
+          setVehicleState(null);
+          if (onVehicleStateUpdate) onVehicleStateUpdate(null);
         }
-
-        if (data && isMounted) {
-          handleTelemetryUpdate(data);
-        }
-      } catch (err) {
-        console.warn('Red Bull telemetry fetch:', err.message);
-      }
+      } catch (e) {}
     }
 
-    function handleTelemetryUpdate(row) {
-      if (!row || typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
+    function handleUpdate(row) {
+      if (!row || !isMounted) return;
+      if (!row.is_active) {
+        setVehicleState(null);
+        if (onVehicleStateUpdate) onVehicleStateUpdate(null);
         return;
       }
+      if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') return;
 
       const { x, y, accuracyRadiusPixels } = transformerRef.current.toMapCoordinates(
         row.latitude,
@@ -76,8 +68,8 @@ function RedBullMapMarker({
       if (x === null || y === null) return;
 
       interpolatorRef.current.setTarget({
-        x: x,
-        y: y,
+        x,
+        y,
         heading: row.heading !== null && row.heading !== undefined ? Number(row.heading) : null,
         accuracyRadius: accuracyRadiusPixels,
         speed: row.speed !== null && row.speed !== undefined ? Number(row.speed) : 0,
@@ -86,7 +78,8 @@ function RedBullMapMarker({
       });
     }
 
-    fetchLatestTelemetry();
+    fetchLatest();
+    pollTimer = setInterval(fetchLatest, 1500);
 
     const channel = supabase
       .channel('redbull-main-map-sync')
@@ -100,7 +93,7 @@ function RedBullMapMarker({
         },
         (payload) => {
           if (payload.new && isMounted) {
-            handleTelemetryUpdate(payload.new);
+            handleUpdate(payload.new);
           }
         }
       )
@@ -108,7 +101,9 @@ function RedBullMapMarker({
 
     function renderLoop() {
       const state = interpolatorRef.current.update();
-      if (state && isMounted) {
+      const isFresh = state && (Date.now() - state.updatedAt < 45000) && state.status === 'LIVE';
+
+      if (isFresh && isMounted) {
         setVehicleState(state);
         if (onVehicleStateUpdate) {
           const semantic = semanticResolverRef.current.resolveLocation(state.x, state.y);
@@ -118,7 +113,11 @@ function RedBullMapMarker({
             nearestLandmark: semantic.nearestLandmark,
           });
         }
+      } else if (isMounted && (!isFresh || state?.status === 'OFFLINE')) {
+        setVehicleState(null);
+        if (onVehicleStateUpdate) onVehicleStateUpdate(null);
       }
+
       animFrameRef.current = requestAnimationFrame(renderLoop);
     }
 
@@ -126,6 +125,7 @@ function RedBullMapMarker({
 
     return () => {
       isMounted = false;
+      if (pollTimer) clearInterval(pollTimer);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       channel.unsubscribe();
     };
@@ -138,8 +138,6 @@ function RedBullMapMarker({
   const left = (vehicleState.x / 1580) * 100;
   const top = (vehicleState.y / 2891) * 100;
   const heading = vehicleState.heading || 0;
-  const speedKm = vehicleState.speed ? (vehicleState.speed * 3.6).toFixed(0) : '0';
-  const isStale = vehicleState.status === 'DELAYED' || vehicleState.status === 'OFFLINE';
 
   return (
     <div
@@ -161,65 +159,33 @@ function RedBullMapMarker({
           height: `${Math.max(28, vehicleState.accuracyRadius * 2)}px`,
           left: '50%',
           top: '50%',
-          backgroundColor: isStale ? 'rgba(100, 116, 139, 0.15)' : 'rgba(225, 29, 72, 0.18)',
-          border: `1.5px dashed ${isStale ? 'rgba(100, 116, 139, 0.4)' : 'rgba(225, 29, 72, 0.6)'}`,
+          backgroundColor: 'rgba(225, 29, 72, 0.15)',
+          border: '1.5px dashed rgba(225, 29, 72, 0.5)',
         }}
       />
 
-      {!isStale && (
-        <span className="animate-ping absolute -inset-2 rounded-full bg-rose-500 opacity-60 pointer-events-none" />
-      )}
+      <span className="animate-ping absolute -inset-1 rounded-full bg-rose-500 opacity-60 pointer-events-none" />
 
       <div className="relative flex flex-col items-center">
-        <div
-          className="relative w-9 h-9 rounded-full bg-slate-950 border-2 border-yellow-400 shadow-[0_0_14px_rgba(225,29,72,0.85)] flex items-center justify-center transition-transform duration-100 group-hover:scale-110 active:scale-95"
-        >
+        <div className="relative w-9 h-9 rounded-full bg-slate-950 border-2 border-yellow-400 shadow-[0_0_14px_rgba(225,29,72,0.85)] flex items-center justify-center transition-transform duration-100 group-hover:scale-110 active:scale-95">
           <div
             className="absolute inset-0 flex items-center justify-center transition-transform duration-150"
             style={{ transform: `rotate(${heading}deg)` }}
           >
-            <div
-              className="absolute -top-2.5 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-bottom-[6px] border-b-yellow-400"
-            />
+            <div className="absolute -top-2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-bottom-[6px] border-b-yellow-400" />
           </div>
 
-          <svg
-            className="w-6 h-6 z-10"
-            viewBox="0 0 100 100"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg className="w-5 h-5 z-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="32" fill="#FACC15" />
-            <path
-              d="M32 58 C24 50 20 44 22 36 C24 30 30 28 34 32 C38 36 40 42 46 48 L46 54 Z"
-              fill="#E11D48"
-              stroke="#881337"
-              strokeWidth="2"
-            />
-            <path
-              d="M68 58 C76 50 80 44 78 36 C76 30 70 28 66 32 C62 36 60 42 54 48 L54 54 Z"
-              fill="#E11D48"
-              stroke="#881337"
-              strokeWidth="2"
-            />
-            <path
-              d="M44 48 C48 42 52 42 56 48 C52 52 48 52 44 48 Z"
-              fill="#FEE2E2"
-            />
+            <path d="M32 58 C24 50 20 44 22 36 C24 30 30 28 34 32 C38 36 40 42 46 48 L46 54 Z" fill="#E11D48" stroke="#881337" strokeWidth="2"/>
+            <path d="M68 58 C76 50 80 44 78 36 C76 30 70 28 66 32 C62 36 60 42 54 48 L54 54 Z" fill="#E11D48" stroke="#881337" strokeWidth="2"/>
             <circle cx="50" cy="50" r="30" stroke="#E11D48" strokeWidth="3" />
           </svg>
         </div>
 
-        <div className="mt-1 bg-slate-900/95 text-yellow-400 border border-yellow-400/80 px-2 py-0.5 rounded-sm font-mono text-[8.5px] font-extrabold uppercase tracking-wider shadow-lg whitespace-nowrap flex items-center gap-1.5 z-40 group-hover:bg-slate-900 group-hover:border-rose-500">
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              isStale ? 'bg-slate-400' : 'bg-rose-500 animate-pulse'
-            }`}
-          />
-          <span>RED BULL</span>
-          <span className="text-[7.5px] text-slate-300 font-bold border-l border-slate-700 pl-1">
-            {speedKm} KM/H
-          </span>
+        <div className="mt-1 bg-slate-900/95 text-yellow-400 border border-yellow-400/80 px-2 py-0.5 rounded-sm font-mono text-[8.5px] font-extrabold uppercase tracking-wider shadow-lg whitespace-nowrap flex items-center gap-1.5 z-40 group-hover:border-rose-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+          <span>RED BULL CAR</span>
         </div>
       </div>
     </div>

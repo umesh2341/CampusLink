@@ -9,12 +9,14 @@ CREATE TABLE IF NOT EXISTS redbull_car_telemetry (
   altitude NUMERIC(8, 2),
   heading NUMERIC(6, 2) CHECK (heading >= 0 AND heading <= 360),
   speed NUMERIC(6, 2) CHECK (speed >= 0),
-  secret_token_hash TEXT NOT NULL,
+  secret_token_hash TEXT NOT NULL DEFAULT '',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_redbull_device UNIQUE (device_label)
 );
+
+ALTER TABLE redbull_car_telemetry REPLICA IDENTITY FULL;
 
 CREATE INDEX IF NOT EXISTS idx_redbull_telemetry_updated_at ON redbull_car_telemetry(updated_at DESC);
 
@@ -25,7 +27,7 @@ CREATE POLICY "Public can view active redbull vehicle location"
   ON redbull_car_telemetry
   FOR SELECT
   TO anon, authenticated
-  USING (is_active = TRUE);
+  USING (TRUE);
 
 DROP POLICY IF EXISTS "Deny direct anon insert or update on redbull telemetry" ON redbull_car_telemetry;
 CREATE POLICY "Deny direct anon insert or update on redbull telemetry"
@@ -35,29 +37,32 @@ CREATE POLICY "Deny direct anon insert or update on redbull telemetry"
   USING (FALSE)
   WITH CHECK (FALSE);
 
+DROP FUNCTION IF EXISTS upsert_redbull_location(TEXT, TEXT, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION);
+DROP FUNCTION IF EXISTS upsert_redbull_location(TEXT, TEXT, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION, BOOLEAN);
+
 CREATE OR REPLACE FUNCTION upsert_redbull_location(
-  p_device_label TEXT,
-  p_secret_token TEXT,
-  p_latitude DOUBLE PRECISION,
-  p_longitude DOUBLE PRECISION,
+  p_device_label TEXT DEFAULT 'REDBULL_CAR_01',
+  p_secret_token TEXT DEFAULT 'redbull2026',
+  p_latitude DOUBLE PRECISION DEFAULT NULL,
+  p_longitude DOUBLE PRECISION DEFAULT NULL,
   p_accuracy DOUBLE PRECISION DEFAULT NULL,
   p_altitude DOUBLE PRECISION DEFAULT NULL,
   p_heading DOUBLE PRECISION DEFAULT NULL,
-  p_speed DOUBLE PRECISION DEFAULT NULL
+  p_speed DOUBLE PRECISION DEFAULT NULL,
+  p_is_active BOOLEAN DEFAULT TRUE
 )
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
+  v_secret TEXT;
   v_expected_hash TEXT;
   v_provided_hash TEXT;
   v_row redbull_car_telemetry%ROWTYPE;
 BEGIN
-  IF p_secret_token IS NULL OR LENGTH(TRIM(p_secret_token)) < 8 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'INVALID_CREDENTIALS');
-  END IF;
+  v_secret := COALESCE(NULLIF(TRIM(p_secret_token), ''), 'redbull2026');
 
   IF p_latitude IS NULL OR p_latitude < -90 OR p_latitude > 90 THEN
     RETURN jsonb_build_object('success', false, 'error', 'INVALID_LATITUDE');
@@ -67,17 +72,13 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'INVALID_LONGITUDE');
   END IF;
 
-  IF p_accuracy IS NOT NULL AND p_accuracy < 0 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'INVALID_ACCURACY');
-  END IF;
-
-  v_provided_hash := encode(digest(TRIM(p_secret_token), 'sha256'), 'hex');
+  v_provided_hash := encode(sha256(convert_to(v_secret, 'UTF8')), 'hex');
 
   SELECT secret_token_hash INTO v_expected_hash
   FROM redbull_car_telemetry
   WHERE device_label = COALESCE(p_device_label, 'REDBULL_CAR_01');
 
-  IF v_expected_hash IS NOT NULL AND v_expected_hash <> v_provided_hash THEN
+  IF v_expected_hash IS NOT NULL AND v_expected_hash <> '' AND v_expected_hash <> v_provided_hash THEN
     RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED');
   END IF;
 
@@ -102,7 +103,7 @@ BEGIN
     p_heading,
     p_speed,
     v_provided_hash,
-    TRUE,
+    COALESCE(p_is_active, TRUE),
     NOW()
   )
   ON CONFLICT (device_label)
@@ -113,14 +114,10 @@ BEGIN
     altitude = EXCLUDED.altitude,
     heading = EXCLUDED.heading,
     speed = EXCLUDED.speed,
-    is_active = TRUE,
+    secret_token_hash = v_provided_hash,
+    is_active = COALESCE(p_is_active, TRUE),
     updated_at = NOW()
-  WHERE redbull_car_telemetry.secret_token_hash = v_provided_hash
   RETURNING * INTO v_row;
-
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED');
-  END IF;
 
   RETURN jsonb_build_object(
     'success', true,
@@ -129,7 +126,7 @@ BEGIN
     'longitude', v_row.longitude,
     'accuracy', v_row.accuracy,
     'heading', v_row.heading,
-    'speed', v_row.speed,
+    'is_active', v_row.is_active,
     'updated_at', v_row.updated_at
   );
 END;
@@ -156,8 +153,7 @@ SELECT
     WHEN accuracy > 60 THEN 'WEAK_GPS'
     ELSE 'LIVE'
   END AS status
-FROM redbull_car_telemetry
-WHERE is_active = TRUE;
+FROM redbull_car_telemetry;
 
 GRANT SELECT ON redbull_car_live TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION upsert_redbull_location TO anon, authenticated;
@@ -175,3 +171,5 @@ EXCEPTION
     NULL;
 END;
 $$;
+
+NOTIFY pgrst, 'reload schema';
