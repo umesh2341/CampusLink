@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CampusLink — Red Bull Live Radar</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --red: #e11d48;
+      --yellow: #facc15;
+      --mono: 'JetBrains Mono', Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+    .hud {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .brand {
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--yellow);
+      background: rgba(250, 204, 21, 0.1);
+      border: 1px solid var(--yellow);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge-green  { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+    .badge-amber  { background: rgba(245, 158, 11, 0.15);  color: #f59e0b; border: 1px solid #f59e0b; }
+    .badge-red    { background: rgba(225, 29, 72, 0.15);   color: #e11d48; border: 1px solid #e11d48; }
+    .stage {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #090e17;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .map-box {
+      position: relative;
+      width: 1580px;
+      height: 2891px;
+    }
+    .map-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1580px;
+      height: 2891px;
+      pointer-events: none;
+    }
+    .marker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      z-index: 40;
+      display: none;
+      pointer-events: none;
+    }
+    .marker-wrap {
+      position: relative;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .marker-pulse {
+      position: absolute;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(225, 29, 72, 0.35);
+      animation: pulseAnim 2s infinite ease-out;
+    }
+    @keyframes pulseAnim {
+      0%   { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .car-disc {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      background: #0f172a;
+      border: 2px solid var(--yellow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(225, 29, 72, 0.85);
+      z-index: 5;
+    }
+    .car-pointer {
+      position: absolute;
+      top: -8px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 8px solid var(--yellow);
+    }
+    .bottom-hud {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-transform: uppercase;
+      font-family: var(--mono);
+    }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-dark { background: #334155; color: #f87171; }
+    .route-path { animation: dashAnim 1.5s linear infinite; }
+    @keyframes dashAnim { to { stroke-dashoffset: -24; } }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="hud">
+      <span class="brand">Red Bull Live</span>
+      <span id="statusBadge" class="badge badge-amber">CONNECTING...</span>
+    </div>
+    <div class="hud">
+      <div style="font-size: 12px; font-family: var(--mono);">
+        Speed: <strong id="speedText" style="color: var(--yellow);">0.0 km/h</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="mapStage">
+    <div class="map-box">
+      <img src="/campus-map.svg" class="map-img" alt="ITER Campus Map">
+
+      <svg style="position:absolute; top:0; left:0; width:1580px; height:2891px; pointer-events:none; z-index:30;">
+        <circle id="accRing" cx="0" cy="0" r="20" fill="rgba(225,29,72,0.15)" stroke="rgba(225,29,72,0.45)" stroke-width="2" stroke-dasharray="6 4" style="display:none;"></circle>
+        <g id="routeLayer"></g>
+      </svg>
+
+      <div id="vehicleMarker" class="marker">
+        <div class="marker-wrap">
+          <div class="marker-pulse"></div>
+          <div id="carHeading" class="car-disc" style="transition: transform 0.1s linear;">
+            <div class="car-pointer"></div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 11.2 2 11.7 2 12.2V16c0 .6.4 1 1 1h2"/>
+              <circle cx="7" cy="17" r="2"/>
+              <path d="M9 17h6"/>
+              <circle cx="17" cy="17" r="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-hud">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+      <div>
+        <div style="font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700;">Location</div>
+        <div id="landmarkText" style="font-size:14px; font-weight:800; color:#fff;">Locating vehicle...</div>
+      </div>
+      <button id="btnNav" class="btn btn-red">Find Car</button>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--mono); color:var(--muted);">
+      <span>Last Fix: <span id="timeText" style="color:#cbd5e1;">--</span></span>
+      <span id="navText" style="display:none; color:#38bdf8; font-weight:700;"></span>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+
+    const DEVICE = 'REDBULL_CAR_01';
+    const MAP_W = 1580;
+    const MAP_H = 2891;
+    const PPM = 4.6;
+    const DEFAULT_URL = 'https://aovketvcxpzyrqxqcgkn.supabase.co';
+    const DEFAULT_KEY = 'sb_publishable_AlVLXjgpsr3E73r4MyM1Hg_w8Yj6KHx';
+
+    const COEFFS = {
+      a: 478863.683905,
+      b: -19596.875341,
+      c: -40689501.705,
+      d: 3693.35968,
+      e: -499077.146284,
+      f: 9789781.4823
+    };
+
+    const LANDMARKS = [
+      { name: 'North Main Gate', x: 676, y: 48, r: 50 },
+      { name: 'BH-7 Hostel', x: 389, y: 140, r: 40 },
+      { name: 'BH-2 Hostel', x: 590, y: 180, r: 40 },
+      { name: 'BH-1 Hostel', x: 572, y: 366, r: 40 },
+      { name: 'Student Section', x: 332, y: 446, r: 45 },
+      { name: 'Electronics Office', x: 719, y: 605, r: 35 },
+      { name: 'Centre for Data Science', x: 869, y: 614, r: 45 },
+      { name: 'Academic Block', x: 437, y: 650, r: 60 },
+      { name: 'Football Court 1', x: 709, y: 766, r: 55 },
+      { name: 'University Auditorium', x: 941, y: 794, r: 60 },
+      { name: 'C-Block', x: 716, y: 961, r: 50 },
+      { name: 'Indoor Stadium', x: 1105, y: 983, r: 55 },
+      { name: 'Science Complex', x: 764, y: 1177, r: 50 },
+      { name: 'F-Block', x: 1053, y: 1213, r: 50 },
+      { name: 'D-Block', x: 321, y: 1266, r: 50 },
+      { name: 'Central Library', x: 537, y: 1266, r: 45 },
+      { name: 'Gymnasium', x: 52, y: 1262, r: 40 },
+      { name: 'Food Court', x: 1337, y: 1308, r: 65 },
+      { name: 'E-Block', x: 871, y: 1485, r: 50 },
+      { name: 'Cricket Ground', x: 394, y: 1614, r: 70 },
+      { name: 'South Gate (BH-9)', x: 1451, y: 2637, r: 50 },
+    ];
+
+    function toMap(lat, lng, acc) {
+      const x = Math.max(0, Math.min(MAP_W, Math.round(COEFFS.a * lng + COEFFS.b * lat + COEFFS.c)));
+      const y = Math.max(0, Math.min(MAP_H, Math.round(COEFFS.d * lng + COEFFS.e * lat + COEFFS.f)));
+      const r = acc != null ? Math.max(10, Math.min(180, Math.round(acc * PPM))) : 20;
+      return { x, y, r };
+    }
+
+    function getLandmark(x, y) {
+      let best = null;
+      let minD = Infinity;
+      for (const lm of LANDMARKS) {
+        const d = Math.hypot(x - lm.x, y - lm.y);
+        if (d < minD) { minD = d; best = lm; }
+      }
+      if (!best) return 'Campus Area';
+      const m = Math.round(minD / PPM);
+      if (minD <= best.r) return `At ${best.name}`;
+      if (m < 20) return `Near ${best.name}`;
+      return `${m}m from ${best.name}`;
+    }
+
+    let cur = null;
+    let tgt = null;
+    let activeNav = false;
+    const userPt = { x: 437, y: 650 };
+
+    const el = {
+      marker: document.getElementById('vehicleMarker'),
+      heading: document.getElementById('carHeading'),
+      ring: document.getElementById('accRing'),
+      route: document.getElementById('routeLayer'),
+      status: document.getElementById('statusBadge'),
+      landmark: document.getElementById('landmarkText'),
+      speed: document.getElementById('speedText'),
+      time: document.getElementById('timeText'),
+      btnNav: document.getElementById('btnNav'),
+      navText: document.getElementById('navText'),
+    };
+
+    const p = new URLSearchParams(window.location.search);
+    const supabaseUrl = p.get('url') || DEFAULT_URL;
+    const supabaseKey = p.get('key') || DEFAULT_KEY;
+
+    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+
+    function handleRow(row) {
+      if (!row || typeof row.latitude !== 'number') return;
+      const { x, y, r } = toMap(row.latitude, row.longitude, row.accuracy);
+      const hdg = row.heading != null ? Number(row.heading) : (cur ? cur.heading : 0);
+
+      tgt = {
+        x, y, r,
+        heading: hdg,
+        speed: row.speed != null ? Number(row.speed) : 0,
+        time: row.updated_at ? new Date(row.updated_at).getTime() : Date.now()
+      };
+
+      if (!cur) cur = { ...tgt };
+
+      el.landmark.innerText = getLandmark(x, y);
+      el.speed.innerText = row.speed ? `${(row.speed * 3.6).toFixed(1)} km/h` : '0.0 km/h';
+      el.time.innerText = new Date(row.updated_at || Date.now()).toLocaleTimeString();
+
+      if (activeNav) renderRoute(x, y);
+    }
+
+    async function fetchInitial() {
+      try {
+        const { data } = await supabase.from('redbull_car_live').select('*').eq('device_label', DEVICE).maybeSingle();
+        if (data) handleRow(data);
+      } catch {}
+    }
+
+    supabase.channel('rb-console-feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'redbull_car_telemetry', filter: `device_label=eq.${DEVICE}` }, payload => {
+        if (payload.new) handleRow(payload.new);
+      })
+      .subscribe(status => {
+        el.status.innerText = status === 'SUBSCRIBED' ? 'LIVE' : 'OFFLINE';
+        el.status.className = 'badge ' + (status === 'SUBSCRIBED' ? 'badge-green' : 'badge-red');
+      });
+
+    function renderRoute(x, y) {
+      const d = `M ${userPt.x} ${userPt.y} L ${x} ${y}`;
+      const dist = Math.round(Math.hypot(x - userPt.x, y - userPt.y) / PPM);
+      el.route.innerHTML = `<path d="${d}" fill="none" stroke="#e11d48" stroke-width="6" stroke-dasharray="12 8" class="route-path"/><path d="${d}" fill="none" stroke="#fff" stroke-width="3"/>`;
+      el.navText.innerText = `${dist}m away`;
+      el.navText.style.display = 'block';
+    }
+
+    el.btnNav.addEventListener('click', () => {
+      if (!cur) return;
+      activeNav = !activeNav;
+      if (activeNav) {
+        renderRoute(cur.x, cur.y);
+        el.btnNav.innerText = 'Clear';
+        el.btnNav.className = 'btn btn-dark';
+      } else {
+        el.route.innerHTML = '';
+        el.navText.style.display = 'none';
+        el.btnNav.innerText = 'Find Car';
+        el.btnNav.className = 'btn btn-red';
+      }
+    });
+
+    function loop() {
+      if (cur && tgt) {
+        cur.x += (tgt.x - cur.x) * 0.15;
+        cur.y += (tgt.y - cur.y) * 0.15;
+        cur.r += (tgt.r - cur.r) * 0.15;
+        cur.heading = tgt.heading;
+
+        el.marker.style.transform = `translate(${cur.x}px, ${cur.y}px)`;
+        el.marker.style.display = 'block';
+        el.heading.style.transform = `rotate(${cur.heading}deg)`;
+        el.ring.setAttribute('cx', cur.x);
+        el.ring.setAttribute('cy', cur.y);
+        el.ring.setAttribute('r', cur.r);
+        el.ring.style.display = 'block';
+      }
+      requestAnimationFrame(loop);
+    }
+
+    fetchInitial();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
