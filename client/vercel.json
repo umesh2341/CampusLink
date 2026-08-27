@@ -5,6 +5,14 @@
       "destination": "https://campuslinks.onrender.com/api/:path*"
     },
     {
+      "source": "/rdbullevent_26/console",
+      "destination": "/rdbullevent_26/console/index.html"
+    },
+    {
+      "source": "/rdbullevent_26/tracker",
+      "destination": "/rdbullevent_26/tracker/index.html"
+    },
+    {
       "source": "/(.*)?",
       "destination": "/index.html"
     }
