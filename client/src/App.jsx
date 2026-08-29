@@ -650,6 +650,7 @@ function AppContent() {
             <AddEventForm
               buildings={buildings}
               isOrganizer={isOrganizer}
+              userId={user?.id}
               onBack={() => setCurrentView('map')}
               onSuccess={handleEventSubmitSuccess}
             />
@@ -660,6 +661,7 @@ function AppContent() {
           }>
             <AddNoticeForm
               isAuthority={isAuthority}
+              userId={user?.id}
               onBack={() => setCurrentView('map')}
               onSuccess={() => {
                 queryClient.invalidateQueries(['notices']);

@@ -8,7 +8,7 @@ const CATEGORIES = [
   { id: 'holiday', label: 'Holiday / Closure' }
 ];
 
-function AddNoticeForm({ onBack, onSuccess, isAuthority }) {
+function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
   const [formData, setFormData] = useState({
     title: '',
     category: 'general',
@@ -63,7 +63,10 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority }) {
       
       const res = await fetch(`${API_BASE}/api/notices`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
         body: JSON.stringify(payload)
       });
       

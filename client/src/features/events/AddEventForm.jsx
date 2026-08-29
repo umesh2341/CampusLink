@@ -56,7 +56,7 @@ const FALLBACK_BUILDINGS = [
   { id: 'unknown', name: 'Utility Building 2', category: 'other' }
 ];
 
-function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }) {
+function AddEventForm({ buildings = [], isOrganizer = false, userId, onBack, onSuccess }) {
   const availableBuildings = (buildings && buildings.length > 0) ? buildings : FALLBACK_BUILDINGS;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -228,7 +228,10 @@ function AddEventForm({ buildings = [], isOrganizer = false, onBack, onSuccess }
       // 2. Submit the event data with the new image URL (or null)
       const res = await fetch(`${API_BASE}/api/events`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
         body: JSON.stringify({
           title, description,
           start_time: new Date(startTime).toISOString(),
