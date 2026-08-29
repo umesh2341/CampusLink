@@ -200,7 +200,11 @@ function AddEventForm({ buildings = [], isOrganizer = false, userId, onBack, onS
       // 1. Upload image if one was selected
       if (imageFile) {
         // Fetch signature from our backend
-        const sigRes = await fetch(`${API_BASE}/api/uploads/signature`);
+        const sigRes = await fetch(`${API_BASE}/api/uploads/signature`, {
+          headers: {
+            'x-user-id': userId
+          }
+        });
         if (!sigRes.ok) throw new Error('Failed to get upload signature from server');
         const { signature, timestamp, api_key, cloud_name } = await sigRes.json();
 
