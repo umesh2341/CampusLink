@@ -12,8 +12,6 @@ export async function detectSchema() {
     events: {
       organizing_club: 'organizing_club',
       registration_url: 'registration_url',
-      is_approved: 'is_approved',
-      has_status: false,
     }
   };
 
@@ -41,9 +39,7 @@ export async function detectSchema() {
     if (eventCols.includes('external_form_url') && !eventCols.includes('registration_url')) {
       schema.events.registration_url = 'external_form_url';
     }
-    if (eventCols.includes('status')) {
-      schema.events.has_status = true;
-    }
+
 
     columnsCache = schema;
     console.log('✅ Auto-detected database schema mapping:', schema);

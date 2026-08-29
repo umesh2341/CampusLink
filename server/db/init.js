@@ -117,7 +117,6 @@ async function run() {
         registration_url VARCHAR(1000),
         floor TEXT,
         room_number TEXT,
-        is_approved BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       );
       ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;
@@ -199,8 +198,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
         registration_url: 'https://campuslink.in/rdbullevent_26/console',
         floor: null,
-        room_number: null,
-        is_approved: true
+        room_number: null
       },
       {
         title: 'Robotics Workshop',
@@ -212,8 +210,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800',
         registration_url: 'https://forms.gle/robotics2026',
         floor: '2nd Floor',
-        room_number: 'Lab 204',
-        is_approved: true
+        room_number: 'Lab 204'
       },
       {
         title: 'Freshers Icebreaker Connect',
@@ -225,8 +222,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800',
         registration_url: 'https://forms.gle/lh3freshers',
         floor: 'Ground Floor',
-        room_number: 'Common Room',
-        is_approved: true
+        room_number: 'Common Room'
       },
       {
         title: 'SOA Cricket Championship',
@@ -238,8 +234,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800',
         registration_url: 'https://forms.gle/cricketchamp',
         floor: null,
-        room_number: null,
-        is_approved: true
+        room_number: null
       },
       {
         title: 'TechTalk: AI & Future Career',
@@ -251,8 +246,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1591115411636-609b556f312e?w=800',
         registration_url: 'https://forms.gle/ieeeai2026',
         floor: '1st Floor',
-        room_number: 'Seminar Hall 1',
-        is_approved: true
+        room_number: 'Seminar Hall 1'
       },
       {
         title: 'Hostel Quiz Night',
@@ -264,8 +258,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?w=800',
         registration_url: 'https://forms.gle/bh1quiz',
         floor: 'Ground Floor',
-        room_number: 'TV Hall',
-        is_approved: true
+        room_number: 'TV Hall'
       },
       {
         title: 'Food Carnival & Live Music',
@@ -277,8 +270,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
         registration_url: 'https://forms.gle/foodmusic',
         floor: null,
-        room_number: null,
-        is_approved: true
+        room_number: null
       },
       {
         title: 'Mock Placement Drive',
@@ -290,17 +282,16 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
         registration_url: 'https://forms.gle/mockplacement',
         floor: '4th Floor',
-        room_number: 'Placement Lab',
-        is_approved: false // defaults to pending/unapproved
+        room_number: 'Placement Lab'
       }
     ];
 
     for (const e of sampleEvents) {
       await dbClient.query(`
-        INSERT INTO events (title, description, start_time, end_time, building_id, organizing_club, image_url, registration_url, floor, room_number, is_approved)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        INSERT INTO events (title, description, start_time, end_time, building_id, organizing_club, image_url, registration_url, floor, room_number)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT DO NOTHING
-      `, [e.title, e.description, e.start_time, e.end_time, e.building_id, e.organizing_club, e.image_url, e.registration_url, e.floor || null, e.room_number || null, e.is_approved]);
+      `, [e.title, e.description, e.start_time, e.end_time, e.building_id, e.organizing_club, e.image_url, e.registration_url, e.floor || null, e.room_number || null]);
     }
 
     console.log('Events seeded successfully.');
