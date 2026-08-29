@@ -78,7 +78,8 @@ export const createEvent = async (req, res) => {
 
     const eventTags = Array.isArray(tags) ? tags : [];
 
-    const isApproved = auto_approve === true || process.env.NODE_ENV === 'development';
+    // Auto-approve all new events immediately
+    const isApproved = true;
 
     // Resolve building_id to UUID if svg_element_id was passed
     let resolvedBuildingId = building_id;

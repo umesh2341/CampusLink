@@ -68,3 +68,27 @@ export const requireAuth = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * Role-Based Access Control Middleware
+ * Must be used AFTER requireAuth so that req.user is populated.
+ */
+export const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !req.user.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required before checking roles.',
+      });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: `Forbidden: Requires one of roles [${allowedRoles.join(', ')}]`,
+      });
+    }
+
+    next();
+  };
+};
