@@ -135,7 +135,7 @@ function AddEventForm({ buildings = [], isOrganizer = false, userId, onBack, onS
         </div>
         <h3 className="text-3xl font-display uppercase tracking-tight text-ink">[ EVENT SUBMITTED ]</h3>
         <p className="text-xs text-muted leading-relaxed">
-          Pending admin clearance before going public. Returning to map…
+          Your event is now live! Returning to map…
         </p>
       </div>
     );

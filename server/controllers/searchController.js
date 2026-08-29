@@ -32,9 +32,6 @@ export const search = async (req, res) => {
     const bldCat = schema.buildings.category;
     const evtClub = schema.events.organizing_club;
     const evtReg = schema.events.registration_url;
-    const evtApprovedCond = schema.events.has_status 
-      ? `(e.is_approved = TRUE OR e.status = 'approved')` 
-      : `e.is_approved = TRUE`;
 
     // 1. Search buildings by name, svg_element_id, or stripped whitespace/hyphens
     const bldQuery = `
@@ -101,7 +98,7 @@ export const search = async (req, res) => {
       location_string: formatDirectionalAnswer(d.building_name, d.floor, d.room_number),
     }));
 
-    // 3. Search active & approved events by title, description, or organizing club
+    // 3. Search active events by title, description, or organizing club
     const eventQuery = `
       SELECT 
         e.id,
@@ -121,8 +118,7 @@ export const search = async (req, res) => {
         b.${bldCat} AS building_category
       FROM events e
       JOIN buildings b ON e.building_id = b.id
-      WHERE ${evtApprovedCond}
-        AND e.end_time >= NOW()
+      WHERE e.end_time >= NOW()
         AND (e.title ILIKE $1 OR e.description ILIKE $1 OR e.${evtClub} ILIKE $1)
       ORDER BY e.start_time ASC
       LIMIT 10;
