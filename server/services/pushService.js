@@ -124,3 +124,42 @@ export const dispatchEventPushNotification = async (event) => {
     console.error('Error dispatching push notifications:', error);
   }
 };
+
+export const dispatchNoticePushNotification = async (notice) => {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.warn('VAPID keys not configured. Skipping push notification dispatch.');
+    return;
+  }
+
+  try {
+    // For notices, we don't filter by muted_club_ids (they are campus-wide)
+    // and we don't filter by enabled_tags (because Notice categories like 'exam', 'holiday' 
+    // are not part of the standard event tags like 'hackathon', 'cultural_event').
+    // Therefore, we send to all active push subscriptions.
+    const subsQuery = `SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions;`;
+    const { rows: subscriptions } = await pool.query(subsQuery);
+
+    if (subscriptions.length === 0) return;
+
+    // Construct payload
+    // We add type: 'notice' to differentiate it for the service worker click handler
+    const payload = JSON.stringify({
+      title: notice.title,
+      body: notice.category.toUpperCase() + ' NOTICE',
+      icon: '/icon-192x192.png',
+      data: {
+        url: notice.document_url || '/',
+        type: 'notice'
+      }
+    });
+
+    const pushPromises = subscriptions.map(async (sub) => {
+      // Reuse the existing single send method for each sub
+      await sendPushNotification(sub, JSON.parse(payload));
+    });
+
+    await Promise.allSettled(pushPromises);
+  } catch (error) {
+    console.error('Error dispatching notice push notifications:', error);
+  }
+};

@@ -79,7 +79,7 @@ function AppContent() {
   
   // Real auth logic replaces local states
   const isOrganizer = profile?.role === 'organizer' || profile?.role === 'admin';
-  const isCoAdmin = profile?.role === 'authority' || profile?.role === 'admin';
+  const isAuthority = profile?.role === 'authority' || profile?.role === 'admin';
   
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
   const [redBullVehicleState, setRedBullVehicleState] = useState(null);
@@ -659,7 +659,7 @@ function AppContent() {
             <div className="flex-1 flex items-center justify-center p-6 text-center font-mono text-xs text-muted uppercase">— LOADING FORM…</div>
           }>
             <AddNoticeForm
-              isCoAdmin={isCoAdmin}
+              isAuthority={isAuthority}
               onBack={() => setCurrentView('map')}
               onSuccess={() => {
                 queryClient.invalidateQueries(['notices']);
@@ -678,7 +678,7 @@ function AppContent() {
           onOpenAddNotice={() => setCurrentView('addNotice')}
           onOpenAdminRequests={() => setIsAdminRequestsModalOpen(true)}
           isOrganizer={isOrganizer}
-          isCoAdmin={isCoAdmin}
+          isAuthority={isAuthority}
           isAdmin={profile?.role === 'admin'}
         />
 

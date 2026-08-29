@@ -8,31 +8,42 @@ const CATEGORIES = [
   { id: 'holiday', label: 'Holiday / Closure' }
 ];
 
-function AddNoticeForm({ onBack, onSuccess, isCoAdmin }) {
+function AddNoticeForm({ onBack, onSuccess, isAuthority }) {
   const [formData, setFormData] = useState({
     title: '',
     category: 'general',
     body: '',
     document_url: '',
-    expires_in_days: ''
+    expires_in_days: '',
+    send_push: false
   });
 
   const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  if (!isCoAdmin) {
+  if (!isAuthority) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 text-center">
         <p className="font-mono text-xs text-signal uppercase">
-          [ ACCESS DENIED: CO-ADMIN ROLE REQUIRED ]
+          [ ACCESS DENIED: AUTHORITY ROLE REQUIRED ]
         </p>
       </div>
     );
   }
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: type === 'checkbox' ? checked : value };
+      
+      // Auto-toggle send_push based on category change
+      if (name === 'category') {
+        newData.send_push = ['exam', 'holiday'].includes(value);
+      }
+      
+      return newData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -190,6 +201,26 @@ function AddNoticeForm({ onBack, onSuccess, isCoAdmin }) {
                     className="w-full bg-paper border-2 border-ink px-3 py-2 text-xs font-bold text-ink placeholder:text-muted/50 focus:outline-none focus:bg-card transition-colors shadow-hard focus:translate-y-[2px] focus:shadow-none"
                     placeholder="HTTPS://..."
                   />
+                </div>
+
+                <div className="pt-2 border-t-2 border-ink/20">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        name="send_push"
+                        checked={formData.send_push}
+                        onChange={handleChange}
+                        className="peer appearance-none w-5 h-5 border-2 border-ink bg-paper checked:bg-signal transition-colors focus:outline-none cursor-pointer"
+                      />
+                      <svg className="absolute w-3 h-3 text-ink opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                    <span className="text-xs font-bold uppercase text-ink group-hover:text-signal transition-colors select-none">
+                      Send push notification for this notice
+                    </span>
+                  </label>
                 </div>
               </div>
 

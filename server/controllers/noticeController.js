@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { dispatchNoticePushNotification } from '../services/pushService.js';
 
 // GET /api/notices
 // Retrieve active notices (published in the past, expires in the future or never)
@@ -22,7 +23,7 @@ export const getNotices = async (req, res) => {
 // POST /api/notices
 export const createNotice = async (req, res) => {
   try {
-    const { title, category, body, document_url, expires_in_days } = req.body;
+    const { title, category, body, document_url, expires_in_days, send_push } = req.body;
     if (!title || !category || !body) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -48,7 +49,13 @@ export const createNotice = async (req, res) => {
     }
     
     const { rows } = await pool.query(query, params);
-    res.status(201).json(rows[0]);
+    const newNotice = rows[0];
+
+    if (send_push) {
+      dispatchNoticePushNotification(newNotice);
+    }
+
+    res.status(201).json(newNotice);
   } catch (error) {
     console.error('Error creating notice:', error);
     res.status(500).json({ error: 'Internal server error' });

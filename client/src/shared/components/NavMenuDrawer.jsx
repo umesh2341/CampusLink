@@ -10,7 +10,7 @@ function NavMenuDrawer({
   onOpenAbout,
   onOpenAddNotice,
   isOrganizer,
-  isCoAdmin,
+  isAuthority,
   isAdmin,
   onOpenAdminRequests,
 }) {
@@ -74,7 +74,7 @@ function NavMenuDrawer({
     });
   }
 
-  if (isCoAdmin) {
+  if (isAuthority) {
     menuItems.unshift({
       id: 'post_notice',
       label: 'Post Notice',
@@ -84,7 +84,7 @@ function NavMenuDrawer({
         onClose();
         if (onOpenAddNotice) onOpenAddNotice();
       },
-      badge: 'CO-ADMIN',
+      badge: 'AUTHORITY',
     });
   }
 
