@@ -53,7 +53,11 @@ const FALLBACK_BUILDINGS = [
   { id: 'sc-block', name: 'Science Block', category: 'academic' },
   { id: 'studentsection', name: 'Student Section', category: 'admin' },
   { id: 'unknown1', name: 'Utility Building 1', category: 'other' },
-  { id: 'unknown', name: 'Utility Building 2', category: 'other' }
+  { id: 'unknown', name: 'Utility Building 2', category: 'other' },
+  { id: 'b-block', name: 'B Block', category: 'academic' },
+  { id: 'mech-workshop', name: 'Mechanical Workshop', category: 'academic' },
+  { id: 'open-gym', name: 'Open Gym', category: 'sports' },
+  { id: 'park-lh2', name: 'Park (LH-2)', category: 'gardens' }
 ];
 
 function AddEventForm({ buildings = [], isOrganizer = false, userId, onBack, onSuccess }) {

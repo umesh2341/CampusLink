@@ -20,7 +20,7 @@ export const buildingCoords = {
   "auditorium":           { "x": 941,  "y": 794  },
   "center-of-datascience":{ "x": 869,  "y": 614  },
   "indoor-stadium":       { "x": 1105, "y": 983  },
-  "academic-block":       { "x": 437,  "y": 650  },
+  "academic-block":       { "x": 548,  "y": 661  },
   "studentsection":       { "x": 332,  "y": 446  },
   "d-block":              { "x": 537,  "y": 1268 },
   "library":              { "x": 294,  "y": 1270 },
@@ -36,4 +36,8 @@ export const buildingCoords = {
   "drive-ev":             { "x": 1194, "y": 1370 },
   "unknown":              { "x": 687,  "y": 1813 },
   "G-block":              { "x": 1037, "y": 1284 },
+  "park-lh2":             { "x": 946,  "y": 2236 },
+  "open-gym":             { "x": 937,  "y": 1991 },
+  "mech-workshop":        { "x": 142,  "y": 1456 },
+  "b-block":              { "x": 475,  "y": 647  },
 };

@@ -42,6 +42,10 @@ const buildingsData = [
   { svg_element_id: 'gym',                 name: 'Gym',                    category: 'sports',       short_name: 'GYM'          },
   { svg_element_id: 'drive-ev',            name: 'EV Charging Station',    category: 'other',        short_name: 'EV STATION', hide_label: true },
   { svg_element_id: 'unknown',             name: 'Utility Building 2',     category: 'other',        short_name: 'UTIL BLDG 2'  },
+  { svg_element_id: 'park-lh2',            name: 'Park (LH-2)',            category: 'gardens',      short_name: 'PARK', hide_label: false },
+  { svg_element_id: 'open-gym',            name: 'Open Gym',               category: 'sports',       short_name: 'OPEN GYM', hide_label: false },
+  { svg_element_id: 'mech-workshop',       name: 'Mechanical Workshop',    category: 'academic',     short_name: 'MECH WORKSHOP', hide_label: false },
+  { svg_element_id: 'b-block',             name: 'B Block',                category: 'academic',     short_name: 'B BLOCK', hide_label: false },
 ];
 
 async function run() {

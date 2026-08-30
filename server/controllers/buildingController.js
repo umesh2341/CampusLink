@@ -37,6 +37,10 @@ const FALLBACK_BUILDINGS = [
   { id: 'drive-ev',              svg_element_id: 'drive-ev',              name: 'EV Charging Station',    category: 'other',        short_name: 'EV STATION',   hide_label: true,  active_event_count: 0 },
   { id: 'unknown1',              svg_element_id: 'unknown1',              name: 'Utility Building 1',     category: 'other',        short_name: 'UTIL BLDG 1',  hide_label: false, active_event_count: 0 },
   { id: 'unknown',               svg_element_id: 'unknown',               name: 'Utility Building 2',     category: 'other',        short_name: 'UTIL BLDG 2',  hide_label: false, active_event_count: 0 },
+  { id: 'park-lh2',              svg_element_id: 'park-lh2',              name: 'Park (LH-2)',            category: 'gardens',      short_name: 'PARK',         hide_label: false, active_event_count: 0 },
+  { id: 'open-gym',              svg_element_id: 'open-gym',              name: 'Open Gym',               category: 'sports',       short_name: 'OPEN GYM',     hide_label: false, active_event_count: 0 },
+  { id: 'mech-workshop',         svg_element_id: 'mech-workshop',         name: 'Mechanical Workshop',    category: 'academic',     short_name: 'MECH WORKSHOP',hide_label: false, active_event_count: 0 },
+  { id: 'b-block',               svg_element_id: 'b-block',               name: 'B Block',                category: 'academic',     short_name: 'B BLOCK',      hide_label: false, active_event_count: 0 },
 ];
 
 // GET /api/buildings
