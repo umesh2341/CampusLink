@@ -2,16 +2,60 @@
  * api.js — all fetch helpers used by useQuery hooks.
  * Each function returns a plain value (parsed JSON) so useQuery
  * can cache, deduplicate, and retry them automatically.
+ *
+ * Authenticated requests include the Supabase access token via
+ * the Authorization header. The token is obtained lazily from
+ * supabase.auth.getSession() so we don't need to pass it around.
  */
+
+import { supabase } from './supabase';
 
 export const API_BASE =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? '' : 'https://campuslinks.onrender.com');
 
 /**
- * Generate or retrieve a persistent anonymous RFC4122 UUID for the current device/tester.
- * Ensures concurrent testers have distinct telemetry streams and profiles.
+ * Get the current Supabase access token, if available.
+ * Returns null if no session exists.
  */
+async function getAccessToken() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build headers for an API request.
+ * If authenticated is true, includes the Authorization header.
+ */
+async function buildHeaders(authenticated = false, extraHeaders = {}) {
+  const headers = { ...extraHeaders };
+  if (authenticated) {
+    const token = await getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
+
+/**
+ * Authenticated fetch wrapper.
+ * Includes Supabase access token in the Authorization header.
+ */
+export async function authFetch(url, options = {}) {
+  const token = await getAccessToken();
+  const headers = {
+    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  return fetch(url, { ...options, headers });
+}
+
+/** Generate or retrieve a persistent anonymous RFC4122 UUID for the current device/tester. */
 export function getOrCreateDeviceId() {
   const STORAGE_KEY = 'campuslink_device_uuid';
   try {
@@ -71,50 +115,41 @@ export const fetchNotices = async () => {
   return res.json();
 };
 
-/** Update user's current GPS location on backend */
-export async function updateUserLocation(locationData, userId = getOrCreateDeviceId()) {
+/** Update user's current GPS location on backend (authenticated) */
+export async function updateUserLocation(locationData) {
+  const headers = await buildHeaders(true, { 'Content-Type': 'application/json' });
   const res = await fetch(`${API_BASE}/api/location`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
-    },
+    headers,
     body: JSON.stringify(locationData),
   });
   if (!res.ok) throw new Error('Failed to update live location');
   return res.json();
 }
 
-/** Retrieve user's current stored location */
-export async function fetchUserLocation(userId = getOrCreateDeviceId()) {
-  const res = await fetch(`${API_BASE}/api/location/me`, {
-    headers: {
-      'x-user-id': userId,
-    },
-  });
+/** Retrieve user's current stored location (authenticated) */
+export async function fetchUserLocation() {
+  const headers = await buildHeaders(true);
+  const res = await fetch(`${API_BASE}/api/location/me`, { headers });
   if (!res.ok) throw new Error('Failed to fetch user location');
   return res.json();
 }
 
-/** Stop location sharing on backend */
-export async function stopUserLocationSharing(userId = getOrCreateDeviceId()) {
+/** Stop location sharing on backend (authenticated) */
+export async function stopUserLocationSharing() {
+  const headers = await buildHeaders(true);
   const res = await fetch(`${API_BASE}/api/location/me`, {
     method: 'DELETE',
-    headers: {
-      'x-user-id': userId,
-    },
+    headers,
   });
   if (!res.ok) throw new Error('Failed to stop location sharing');
   return res.json();
 }
 
-/** Retrieve active users sharing location on campus */
-export async function fetchActiveLocations(userId = getOrCreateDeviceId()) {
-  const res = await fetch(`${API_BASE}/api/location/active`, {
-    headers: {
-      'x-user-id': userId,
-    },
-  });
+/** Retrieve active users sharing location on campus (authenticated) */
+export async function fetchActiveLocations() {
+  const headers = await buildHeaders(true);
+  const res = await fetch(`${API_BASE}/api/location/active`, { headers });
   if (!res.ok) throw new Error('Failed to fetch active campus locations');
   return res.json();
 }

@@ -3,11 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X } from 'lucide-react';
 
 function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="absolute inset-0 z-50 flex items-center justify-center p-4 font-mono select-none">
+      {isOpen && (
+      <div key="notice-board" className="absolute inset-0 z-50 flex items-center justify-center p-4 font-mono select-none">
         <motion.div
           key="noticeboard-backdrop"
           initial={{ opacity: 0 }}
@@ -95,6 +94,7 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }

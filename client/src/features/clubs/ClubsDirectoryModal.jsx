@@ -37,11 +37,10 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
     });
   }, [clubs, selectedCategory, searchQuery]);
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="absolute inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-mono select-none">
+      {isOpen && (
+      <div key="clubs-directory" className="absolute inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -200,6 +199,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }

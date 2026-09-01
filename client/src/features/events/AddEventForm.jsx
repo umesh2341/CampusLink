@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import CropImageModal from './CropImageModal';
 import { ShieldAlert, CheckCircle, ArrowLeft, ChevronDown, X, UploadCloud, Trash2, PenLine } from 'lucide-react';
 import { API_BASE } from '../../shared/lib/api';
@@ -545,10 +546,11 @@ function AddEventForm({ buildings = [], isOrganizer = false, userId, onBack, onS
             placeholder="https://forms.gle/…" className={`${inputCls} normal-case`} />
         </div>
 
-        <button type="submit" disabled={loading}
-          className="w-full font-mono text-sm font-bold uppercase tracking-wider bg-signal text-ink py-3.5 px-4 rounded-xs border-2 border-ink shadow-hard active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all focus:outline-none disabled:opacity-50 disabled:pointer-events-none mt-2">
+        <motion.button type="submit" disabled={loading}
+          whileTap={{ y: 2 }}
+          className="w-full font-mono text-sm font-bold uppercase tracking-wider bg-signal text-ink py-3.5 px-4 rounded-xs border-2 border-ink shadow-hard transition-all focus:outline-none disabled:opacity-50 disabled:pointer-events-none mt-2">
           {loading ? 'SUBMITTING…' : 'SUBMIT EVENT PASS'}
-        </button>
+        </motion.button>
       </form>
 
       {/* Cropper Modal */}

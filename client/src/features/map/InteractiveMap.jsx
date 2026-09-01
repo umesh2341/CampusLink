@@ -45,6 +45,12 @@ function InteractiveMap({
   const [isInteracting, setIsInteracting] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
 
+  // Refs for latest values (avoids effect re-registration)
+  const zoomRef = useRef(savedZoom ?? 0.25);
+  const panRef = useRef(savedPan ?? { x: 0, y: 10 });
+  const selectedBuildingRef = useRef(null);
+  const prevHighlightedRef = useRef(null);
+
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
   const dragDistanceRef = useRef(0);
@@ -150,9 +156,7 @@ function InteractiveMap({
     const viewportEl = viewportRef.current;
     if (!viewportEl) return;
 
-    let wheelTimeout;
-
-    const handleWheel = (e) => {
+    let wheelTimeout;      const handleWheel = (e) => {
       e.preventDefault();
       setIsInteracting(true);
 
@@ -160,16 +164,19 @@ function InteractiveMap({
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
+      const curZoom = zoomRef.current;
+      const curPan = panRef.current;
+
       // Exponential zoom scaling for smooth response across trackpads & mouse wheels
       const factor = Math.exp(-e.deltaY * 0.0022);
       const minZ = getMinZoom();
-      const newZoom = Math.min(MAX_ZOOM, Math.max(minZ, zoom * factor));
+      const newZoom = Math.min(MAX_ZOOM, Math.max(minZ, curZoom * factor));
 
-      if (Math.abs(newZoom - zoom) < 0.0005) return;
+      if (Math.abs(newZoom - curZoom) < 0.0005) return;
 
-      const scaleRatio = newZoom / zoom;
-      const newPanX = mouseX - (mouseX - pan.x) * scaleRatio;
-      const newPanY = mouseY - (mouseY - pan.y) * scaleRatio;
+      const scaleRatio = newZoom / curZoom;
+      const newPanX = mouseX - (mouseX - curPan.x) * scaleRatio;
+      const newPanY = mouseY - (mouseY - curPan.y) * scaleRatio;
 
       updateTransform(newZoom, { x: newPanX, y: newPanY });
 
@@ -182,7 +189,7 @@ function InteractiveMap({
       viewportEl.removeEventListener('wheel', handleWheel);
       clearTimeout(wheelTimeout);
     };
-  }, [zoom, pan]);
+  }, []); // stable — reads zoomRef/panRef
 
   // Set up event listeners on SVG elements after mounting/updating
   useEffect(() => {
@@ -193,7 +200,7 @@ function InteractiveMap({
       if (el) {
         el.style.cursor = 'pointer';
         el.style.pointerEvents = 'auto';
-        el.style.transition = 'opacity 0.2s ease, filter 0.2s ease';
+        el.style.transition = 'opacity 0.2s ease, stroke 0.2s ease';
 
         const clickHandler = (e) => {
           if (dragDistanceRef.current > 16) return;
@@ -206,7 +213,7 @@ function InteractiveMap({
         };
 
         const mouseLeaveHandler = () => {
-          if (selectedBuilding?.id !== building.id) {
+          if (selectedBuildingRef.current?.id !== building.id) {
             el.style.opacity = '1';
           }
         };
@@ -230,31 +237,37 @@ function InteractiveMap({
         }
       });
     };
-  }, [buildings, onSelectBuilding, selectedBuilding]);
+  }, [buildings, onSelectBuilding]); // selectedBuilding read via ref
 
-  // Apply selected building outline/glow highlight
+  // Apply selected building stroke highlight (O(1) — only touches prev + current)
   useEffect(() => {
     if (!svgWrapperRef.current) return;
 
-    buildings.forEach((building) => {
-      const el = svgWrapperRef.current.querySelector(`#${building.svg_element_id}`);
-      if (el) {
-        el.style.filter = 'none';
-        el.style.opacity = '1';
-      }
-    });
+    // Reset only the previously highlighted element
+    const prev = prevHighlightedRef.current;
+    if (prev) {
+      prev.style.stroke = '';
+      prev.style.strokeWidth = '';
+      prev.style.opacity = '1';
+    }
 
+    // Highlight the newly selected element
     if (selectedBuilding) {
       const svgId = selectedBuilding.svg_element_id || selectedBuilding.building_svg_element_id;
       if (svgId) {
         const el = svgWrapperRef.current.querySelector(`#${svgId}`);
         if (el) {
-          el.style.filter = 'drop-shadow(0 0 16px #FF7A33)';
+          el.style.stroke = '#FF7A33';
+          el.style.strokeWidth = '5';
           el.style.opacity = '0.9';
+          prevHighlightedRef.current = el;
+          return;
         }
       }
     }
-  }, [selectedBuilding, buildings]);
+
+    prevHighlightedRef.current = null;
+  }, [selectedBuilding]);
 
   // Auto-center and zoom map when a building is selected
   useEffect(() => {
@@ -456,6 +469,15 @@ function InteractiveMap({
     handleTouchMoveRef.current = handleTouchMove;
     handleTouchEndRef.current = handleTouchEnd;
   });
+
+  // Keep refs in sync with state (used by wheel handler + mouseLeave)
+  useEffect(() => {
+    zoomRef.current = zoom;
+    panRef.current = pan;
+  });
+  useEffect(() => {
+    selectedBuildingRef.current = selectedBuilding;
+  }, [selectedBuilding]);
 
   useEffect(() => {
     const el = interactionLayerRef.current;
