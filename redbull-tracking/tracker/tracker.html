@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Red Bull Live Tracker</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: #0f172a;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --red: #e11d48;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --mono: 'JetBrains Mono', Consolas, Menlo, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--mono);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid var(--green); }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid var(--amber); }
+    .badge-red   { background: rgba(225, 29, 72, 0.15); color: var(--red); border: 1px solid var(--red); }
+    .badge-muted { background: #1e293b; color: var(--muted); border: 1px solid var(--border); }
+    .pulse { animation: pulse 1.8s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .val {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: var(--mono);
+      color: #fff;
+    }
+    .val-sm { font-size: 13px; word-break: break-all; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+    }
+    .btn-primary { background: var(--red); color: white; }
+    .btn-danger { background: #1e293b; color: #f87171; border: 1px solid #ef4444; box-shadow: none; }
+    .banner {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: var(--mono);
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.4;
+    }
+    .banner-err {
+      background: rgba(220, 38, 38, 0.15);
+      border: 1px solid var(--red);
+      color: #fca5a5;
+    }
+    .footer {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">
+      <span style="color: #e11d48;">&#9679;</span>
+      <span>Red Bull Car Tracker</span>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <span id="wakeLockBadge" class="badge badge-muted">WakeLock: OFF</span>
+      <span id="statusBadge" class="badge badge-muted">STANDBY</span>
+    </div>
+  </div>
+
+  <div id="errorLog" class="banner banner-err"></div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">GPS Accuracy</div>
+      <div class="val" id="statAccuracy">--</div>
+    </div>
+    <div class="card">
+      <div class="label">Updates Sent</div>
+      <div class="val" id="statSentCount">0</div>
+    </div>
+    <div class="card" style="grid-column: span 2;">
+      <div class="label">Live Coordinates (Lat, Lng)</div>
+      <div class="val val-sm">
+        <span id="statLat">0.0000000</span>, <span id="statLng">0.0000000</span>
+      </div>
+    </div>
+  </div>
+
+  <button id="btnToggle" class="btn btn-primary">Start Live Tracking</button>
+
+  <div class="footer">
+    <span>Last Update: <strong id="statLastSent" style="color: #fff;">--</strong></span>
+    <span>CampusLink &mdash; Club Nexus (I7)</span>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+
+    const SUPABASE_URL = 'https://aovketvcxpzyrqxqcgkn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_AlVLXjgpsr3E73r4MyM1Hg_w8Yj6KHx';
+    const DEVICE_LABEL = 'REDBULL_CAR_01';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+
+    let watchId = null;
+    let wakeLock = null;
+    let isTracking = false;
+    let lastSent = 0;
+    let sentCount = 0;
+    let lastPos = null;
+
+    const el = {
+      btn: document.getElementById('btnToggle'),
+      status: document.getElementById('statusBadge'),
+      wakeLock: document.getElementById('wakeLockBadge'),
+      lat: document.getElementById('statLat'),
+      lng: document.getElementById('statLng'),
+      acc: document.getElementById('statAccuracy'),
+      count: document.getElementById('statSentCount'),
+      lastSent: document.getElementById('statLastSent'),
+      err: document.getElementById('errorLog'),
+    };
+
+    async function setWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        el.wakeLock.innerText = 'WakeLock: ON';
+        el.wakeLock.className = 'badge badge-green';
+        wakeLock.addEventListener('release', () => {
+          el.wakeLock.innerText = 'WakeLock: OFF';
+          el.wakeLock.className = 'badge badge-amber';
+        });
+      } catch {
+        el.wakeLock.innerText = 'WakeLock: ERR';
+        el.wakeLock.className = 'badge badge-red';
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isTracking) setWakeLock();
+    });
+
+    function calcHeading(lat1, lon1, lat2, lon2) {
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const y = Math.sin(dLon) * Math.cos((lat2 * Math.PI) / 180);
+      const x = Math.cos((lat1 * Math.PI) / 180) * Math.sin((lat2 * Math.PI) / 180) - Math.sin((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.cos(dLon);
+      return Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
+    }
+
+    async function onPosition(pos) {
+      const c = pos.coords;
+      const lat = c.latitude;
+      const lng = c.longitude;
+      const acc = Math.round(c.accuracy || 15);
+      
+      let heading = c.heading !== null && !isNaN(c.heading) && c.heading >= 0 ? Math.round(c.heading) : null;
+      if (heading === null && lastPos) {
+        heading = calcHeading(lastPos.lat, lastPos.lng, lat, lng);
+      }
+      lastPos = { lat, lng };
+
+      el.lat.innerText = lat.toFixed(7);
+      el.lng.innerText = lng.toFixed(7);
+      el.acc.innerText = `\u00b1${acc}m`;
+
+      el.status.innerText = isTracking ? 'TRANSMITTING' : 'READY';
+      el.status.className = isTracking ? 'badge badge-green pulse' : 'badge badge-amber';
+
+      if (!isTracking) return;
+      if (Date.now() - lastSent < 1100) return;
+
+      await sendUpdate({ lat, lng, acc, heading, altitude: c.altitude });
+    }
+
+    async function sendUpdate(data) {
+      try {
+        const { data: res, error } = await supabase.rpc('upsert_redbull_location', {
+          p_device_label: DEVICE_LABEL,
+          p_secret_token: 'redbull2026',
+          p_latitude: data.lat,
+          p_longitude: data.lng,
+          p_accuracy: data.acc,
+          p_altitude: data.altitude,
+          p_heading: data.heading,
+          p_speed: null,
+        });
+
+        if (error) throw new Error(error.message);
+        if (res && res.success === false) throw new Error(res.error || 'Server error');
+
+        lastSent = Date.now();
+        sentCount++;
+        el.count.innerText = sentCount;
+        el.lastSent.innerText = new Date().toLocaleTimeString();
+        el.err.style.display = 'none';
+      } catch (e) {
+        el.err.innerText = `Error: ${e.message}`;
+        el.err.style.display = 'block';
+      }
+    }
+
+    function start() {
+      if (!navigator.geolocation) {
+        el.err.innerText = 'Geolocation not supported.';
+        el.err.style.display = 'block';
+        return;
+      }
+
+      isTracking = true;
+      el.btn.innerText = 'Stop Live Tracking';
+      el.btn.className = 'btn btn-danger';
+      el.err.style.display = 'none';
+
+      setWakeLock();
+
+      watchId = navigator.geolocation.watchPosition(
+        onPosition,
+        (err) => {
+          el.err.innerText = 'GPS Error: ' + err.message;
+          el.err.style.display = 'block';
+          el.status.innerText = 'GPS ERR';
+          el.status.className = 'badge badge-red';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function stop() {
+      isTracking = false;
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
+      el.btn.innerText = 'Start Live Tracking';
+      el.btn.className = 'btn btn-primary';
+      el.status.innerText = 'STANDBY';
+      el.status.className = 'badge badge-muted';
+    }
+
+    el.btn.addEventListener('click', () => isTracking ? stop() : start());
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(onPosition, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+    }
+  </script>
+</body>
+</html>

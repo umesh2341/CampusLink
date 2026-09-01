@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, BellOff, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
 import { API_BASE } from '../../shared/lib/api';
+import { useAuth } from '../../shared/context/AuthContext';
 
 const ALL_TAGS = [
   { id: 'hackathon', label: 'Hackathon' },
@@ -21,6 +22,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [subscribing, setSubscribing] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,7 +46,17 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
+      ]).catch(() => null);
+
+      if (!registration) {
+        setSubscription(null);
+        setLoadingSub(false);
+        return;
+      }
+      
       const sub = await registration.pushManager.getSubscription();
 
       if (!sub) {
@@ -72,7 +84,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
   const handleEnablePush = async () => {
     setSubscribing(true);
     try {
-      await subscribeUserToPush();
+      await subscribeUserToPush(user?.id);
       await checkSubscriptionAndLoad();
     } catch (err) {
       console.error('Enable Push Error:', err);
@@ -264,10 +276,10 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
                             <img
                               src={club.logo_url}
                               alt={club.name}
-                              className="w-7 h-7 rounded-xs border border-ink object-cover"
+                              className="w-7 h-7 rounded-full border border-ink object-cover"
                             />
                           ) : (
-                            <div className="w-7 h-7 rounded-xs border border-ink bg-ink text-paper flex items-center justify-center font-display text-xs font-bold">
+                            <div className="w-7 h-7 rounded-full border border-ink bg-ink text-paper flex items-center justify-center font-display text-xs font-bold">
                               {club.name.substring(0, 2).toUpperCase()}
                             </div>
                           )}

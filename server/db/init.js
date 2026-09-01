@@ -6,42 +6,46 @@ dotenv.config();
 const { Client } = pg;
 
 const buildingsData = [
-  { svg_element_id: 'electronic-office', name: 'Electronics Office', category: 'academic' },
-  { svg_element_id: 'lh1', name: 'Ladies Hostel 1', category: 'hostel_girls' },
-  { svg_element_id: 'lh2', name: 'Ladies Hostel 2', category: 'hostel_girls' },
-  { svg_element_id: 'lh3', name: 'Ladies Hostel 3', category: 'hostel_girls' },
-  { svg_element_id: 'lh4', name: 'Ladies Hostel 4', category: 'hostel_girls' },
-  { svg_element_id: 'lh5', name: 'Ladies Hostel 5', category: 'hostel_girls' },
-  { svg_element_id: 'bh1', name: 'Boys Hostel 1', category: 'hostel_boys' },
-  { svg_element_id: 'bh2', name: 'Boys Hostel 2', category: 'hostel_boys' },
-  { svg_element_id: 'bh5', name: 'Boys Hostel 5', category: 'hostel_boys' },
-  { svg_element_id: 'bh6', name: 'Boys Hostel 6', category: 'hostel_boys' },
-  { svg_element_id: 'bh7', name: 'Boys Hostel 7', category: 'hostel_boys' },
-  { svg_element_id: 'bh8', name: 'Boys Hostel 8', category: 'hostel_boys' },
-  { svg_element_id: 'bh9', name: 'Boys Hostel 9', category: 'hostel_boys' },
-  { svg_element_id: 'bh10', name: 'Boys Hostel 10', category: 'hostel_boys' },
-  { svg_element_id: 'bh12', name: 'Boys Hostel 12', category: 'hostel_boys' },
-  { svg_element_id: 'cricket-court1', name: 'Cricket Court', category: 'sports' },
-  { svg_element_id: 'football-court1', name: 'Football Court 1', category: 'sports' },
-  { svg_element_id: 'football-court2', name: 'Football Court 2', category: 'sports' },
-  { svg_element_id: 'auditorium', name: 'Auditorium', category: 'other' },
-  { svg_element_id: 'center-of-datascience', name: 'Center for Data Science', category: 'academic' },
-  { svg_element_id: 'indoor-stadium', name: 'Indoor Stadium', category: 'sports' },
-  { svg_element_id: 'academic-block', name: 'Academic Block', category: 'academic' },
-  { svg_element_id: 'studentsection', name: 'Student Section', category: 'admin' },
-  { svg_element_id: 'd-block', name: 'D Block', category: 'academic' },
-  { svg_element_id: 'library', name: 'Library', category: 'academic' },
-  { svg_element_id: 'f-block', name: 'F Block', category: 'academic' },
-  { svg_element_id: 'sc-block', name: 'Science Block', category: 'academic' },
-  { svg_element_id: 'eblock', name: 'E Block', category: 'academic' },
-  { svg_element_id: 'garden', name: 'Garden', category: 'gardens' },
-  { svg_element_id: 'unknown1', name: 'Utility Building 1', category: 'other' },
-  { svg_element_id: 'food-court', name: 'Food Court', category: 'cafeteria' },
-  { svg_element_id: 'c-block', name: 'C Block', category: 'academic' },
-  { svg_element_id: 'playground', name: 'Playground', category: 'sports' },
-  { svg_element_id: 'gym', name: 'Gym', category: 'sports' },
-  { svg_element_id: 'drive-ev', name: 'EV Charging Station', category: 'other' },
-  { svg_element_id: 'unknown', name: 'Utility Building 2', category: 'other' }
+  { svg_element_id: 'electronic-office',   name: 'Electronics Office',     category: 'academic',     short_name: 'ELEC OFFICE', hide_label: true },
+  { svg_element_id: 'lh1',                 name: 'Ladies Hostel 1',        category: 'hostel_girls', short_name: 'LH1'          },
+  { svg_element_id: 'lh2',                 name: 'Ladies Hostel 2',        category: 'hostel_girls', short_name: 'LH2'          },
+  { svg_element_id: 'lh3',                 name: 'Ladies Hostel 3',        category: 'hostel_girls', short_name: 'LH3'          },
+  { svg_element_id: 'lh4',                 name: 'Ladies Hostel 4',        category: 'hostel_girls', short_name: 'LH4'          },
+  { svg_element_id: 'lh5',                 name: 'Ladies Hostel 5',        category: 'hostel_girls', short_name: 'LH5'          },
+  { svg_element_id: 'bh1',                 name: 'Boys Hostel 1',          category: 'hostel_boys',  short_name: 'BH1'          },
+  { svg_element_id: 'bh2',                 name: 'Boys Hostel 2',          category: 'hostel_boys',  short_name: 'BH2'          },
+  { svg_element_id: 'bh5',                 name: 'Boys Hostel 5',          category: 'hostel_boys',  short_name: 'BH5'          },
+  { svg_element_id: 'bh6',                 name: 'Boys Hostel 6',          category: 'hostel_boys',  short_name: 'BH6'          },
+  { svg_element_id: 'bh7',                 name: 'Boys Hostel 7',          category: 'hostel_boys',  short_name: 'BH7'          },
+  { svg_element_id: 'bh8',                 name: 'Boys Hostel 8',          category: 'hostel_boys',  short_name: 'BH8'          },
+  { svg_element_id: 'bh9',                 name: 'Boys Hostel 9',          category: 'hostel_boys',  short_name: 'BH9'          },
+  { svg_element_id: 'bh10',                name: 'Boys Hostel 10',         category: 'hostel_boys',  short_name: 'BH10'         },
+  { svg_element_id: 'bh12',                name: 'Boys Hostel 12',         category: 'hostel_boys',  short_name: 'BH12'         },
+  { svg_element_id: 'cricket-court1',      name: 'Cricket Court',          category: 'sports',       short_name: 'CRICKET CRT'  },
+  { svg_element_id: 'football-court1',     name: 'Football Court 1',       category: 'sports',       short_name: 'FOOTBALL 1'   },
+  { svg_element_id: 'football-court2',     name: 'Football Court 2',       category: 'sports',       short_name: 'FOOTBALL 2'   },
+  { svg_element_id: 'auditorium',          name: 'Auditorium',             category: 'other',        short_name: 'AUDITORIUM'   },
+  { svg_element_id: 'center-of-datascience', name: 'Center for Data Science', category: 'academic', short_name: 'DATA SCI'     },
+  { svg_element_id: 'indoor-stadium',      name: 'Indoor Stadium',         category: 'sports',       short_name: 'STADIUM'      },
+  { svg_element_id: 'academic-block',      name: 'Academic Block',         category: 'academic',     short_name: 'ACAD BLOCK'   },
+  { svg_element_id: 'studentsection',      name: 'Student Section',        category: 'admin',        short_name: 'STU SECTION'  },
+  { svg_element_id: 'd-block',             name: 'D Block',                category: 'academic',     short_name: 'D BLOCK'      },
+  { svg_element_id: 'library',             name: 'Library',                category: 'academic',     short_name: 'LIBRARY'      },
+  { svg_element_id: 'f-block',             name: 'F Block',                category: 'academic',     short_name: 'F BLOCK'      },
+  { svg_element_id: 'sc-block',            name: 'Science Block',          category: 'academic',     short_name: 'SC BLOCK'     },
+  { svg_element_id: 'eblock',              name: 'E Block',                category: 'academic',     short_name: 'E BLOCK'      },
+  { svg_element_id: 'garden',              name: 'Garden',                 category: 'gardens',      short_name: 'GARDEN'       },
+  { svg_element_id: 'unknown1',            name: 'Utility Building 1',     category: 'other',        short_name: 'UTIL BLDG 1'  },
+  { svg_element_id: 'food-court',          name: 'Food Court',             category: 'cafeteria',    short_name: 'FOOD COURT'   },
+  { svg_element_id: 'c-block',             name: 'C Block',                category: 'academic',     short_name: 'C BLOCK'      },
+  { svg_element_id: 'playground',          name: 'Playground',             category: 'sports',       short_name: 'PLAYGROUND'   },
+  { svg_element_id: 'gym',                 name: 'Gym',                    category: 'sports',       short_name: 'GYM'          },
+  { svg_element_id: 'drive-ev',            name: 'EV Charging Station',    category: 'other',        short_name: 'EV STATION', hide_label: true },
+  { svg_element_id: 'unknown',             name: 'Utility Building 2',     category: 'other',        short_name: 'UTIL BLDG 2'  },
+  { svg_element_id: 'park-lh2',            name: 'Park (LH-2)',            category: 'gardens',      short_name: 'PARK', hide_label: false },
+  { svg_element_id: 'open-gym',            name: 'Open Gym',               category: 'sports',       short_name: 'OPEN GYM', hide_label: false },
+  { svg_element_id: 'mech-workshop',       name: 'Mechanical Workshop',    category: 'academic',     short_name: 'MECH WORKSHOP', hide_label: false },
+  { svg_element_id: 'b-block',             name: 'B Block',                category: 'academic',     short_name: 'B BLOCK', hide_label: false },
 ];
 
 async function run() {
@@ -79,15 +83,27 @@ async function run() {
     await dbClient.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
     console.log('pgcrypto extension ensured.');
 
-    // Create buildings table
+    // Ensure buildings table and columns
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS buildings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         svg_element_id VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
-        category VARCHAR(50) NOT NULL
-      )
+        category VARCHAR(50)
+      );
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS short_name VARCHAR(50);
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS hide_label BOOLEAN DEFAULT FALSE;
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+      ALTER TABLE buildings ADD COLUMN IF NOT EXISTS type VARCHAR(50);
     `);
+
+    try {
+      await dbClient.query(`ALTER TABLE buildings ALTER COLUMN type DROP NOT NULL;`);
+    } catch (e) {}
+    try {
+      await dbClient.query(`ALTER TABLE buildings ALTER COLUMN category DROP NOT NULL;`);
+    } catch (e) {}
+
     console.log('Buildings table ensured.');
 
     // Add columns that controllers query but may not exist on older schemas
@@ -125,18 +141,18 @@ async function run() {
         end_time TIMESTAMP WITH TIME ZONE NOT NULL,
         building_id UUID REFERENCES buildings(id) ON DELETE CASCADE NOT NULL,
         club_id UUID REFERENCES clubs(id) ON DELETE SET NULL,
-        organizing_club VARCHAR(255) NOT NULL,
+        organizing_club VARCHAR(255),
         image_url VARCHAR(1000),
         registration_url VARCHAR(1000),
         floor TEXT,
         room_number TEXT,
-        tags TEXT[] DEFAULT '{}',
-        is_approved BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-      )
+      );
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS organizing_club VARCHAR(255);
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_url VARCHAR(1000);
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
     `);
-    await dbClient.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS floor TEXT;`);
-    await dbClient.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`);
     // Create departments table
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS departments (
@@ -166,109 +182,52 @@ async function run() {
     `);
     console.log('Notices table ensured.');
 
-    // Create push_subscriptions table (required for push notifications)
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS push_subscriptions (
-        id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        endpoint      TEXT NOT NULL UNIQUE,
-        p256dh_key    TEXT NOT NULL,
-        auth_key      TEXT NOT NULL,
-        created_at    TIMESTAMPTZ DEFAULT now()
-      )
-    `);
-    console.log('Push subscriptions table ensured.');
-
-    // Create subscription_preferences table (requires push_subscriptions)
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS subscription_preferences (
-        subscription_id  UUID PRIMARY KEY REFERENCES push_subscriptions(id) ON DELETE CASCADE,
-        muted_club_ids   UUID[] DEFAULT '{}',
-        enabled_tags     TEXT[] DEFAULT ARRAY['hackathon','tech_event','workshop','cultural_event','college_official'],
-        updated_at       TIMESTAMPTZ DEFAULT now()
-      )
-    `);
-    console.log('Subscription preferences table ensured.');
-
-    // Create profiles table (required for auth and location tracking)
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS profiles (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email       VARCHAR(255) UNIQUE,
-        name        VARCHAR(255) NOT NULL,
-        role        VARCHAR(50) DEFAULT 'student' NOT NULL,
-        created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
-      )
-    `);
-    // Seed a default student profile for development/testing
-    await dbClient.query(`
-      INSERT INTO profiles (id, email, name, role)
-      VALUES ('11111111-2222-3333-4444-555555555555', 'student@iter.soa.ac.in', 'John Doe', 'student')
-      ON CONFLICT (id) DO NOTHING;
-    `);
-    await dbClient.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
-    console.log('Profiles columns ensured.');
-
-    // Create user_locations table (requires profiles)
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS user_locations (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id     UUID NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
-        latitude    NUMERIC(10, 7) NOT NULL,
-        longitude   NUMERIC(10, 7) NOT NULL,
-        accuracy    NUMERIC(8, 2),
-        altitude    NUMERIC(8, 2),
-        heading     NUMERIC(6, 2),
-        speed       NUMERIC(6, 2),
-        is_active   BOOLEAN DEFAULT TRUE NOT NULL,
-        updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_user_locations_user_id ON user_locations(user_id);
-      CREATE INDEX IF NOT EXISTS idx_user_locations_updated_at ON user_locations(updated_at);
-      CREATE INDEX IF NOT EXISTS idx_user_locations_active ON user_locations(is_active) WHERE is_active = TRUE;
-    `);
-    console.log('User locations table and indexes ensured.');
-
-    // Seed buildings
+    // ── BUILDINGS (safe upsert, always runs) ───────────────────────────────
     console.log('Seeding buildings data...');
     for (const b of buildingsData) {
       await dbClient.query(`
-        INSERT INTO buildings (svg_element_id, name, category)
-        VALUES ($1, $2, $3)
+        INSERT INTO buildings (svg_element_id, name, category, type, short_name, hide_label)
+        VALUES ($1, $2, $3, $3, $4, $5)
         ON CONFLICT (svg_element_id) DO UPDATE
-        SET name = EXCLUDED.name, category = EXCLUDED.category
-      `, [b.svg_element_id, b.name, b.category]);
+        SET name = EXCLUDED.name, category = EXCLUDED.category, type = EXCLUDED.type, short_name = EXCLUDED.short_name, hide_label = EXCLUDED.hide_label
+      `, [b.svg_element_id, b.name, b.category, b.short_name, b.hide_label || false]);
     }
     console.log('Buildings seeded.');
 
-    // Fetch seeded buildings to link events
+    // ── EVENTS & DEPARTMENTS SAMPLE DATA ────────────────────────────────────
+    // PRODUCTION GUARD: sample/dummy data is NEVER inserted in production.
+    // To run this locally for dev setup: NODE_ENV=development node server/db/init.js
+    // Never call this file automatically from a build or start command.
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️  NODE_ENV=production detected — skipping all sample data seeding. Real data is preserved.');
+      return;
+    }
+
+    // Fetch buildings to link events (dev/local only beyond this point)
     const buildingsRes = await dbClient.query('SELECT id, svg_element_id FROM buildings');
     const buildingsMap = {};
     buildingsRes.rows.forEach(row => {
       buildingsMap[row.svg_element_id] = row.id;
     });
 
-    // Clear existing seeded events to prevent duplicates on multiple runs
-    await dbClient.query('DELETE FROM events');
-    console.log('Cleared existing events.');
-
-    // Seed sample events on 6 distinct buildings
+    // Seed sample events — uses ON CONFLICT DO NOTHING so existing real data is never overwritten
+    console.log('Seeding sample events (dev only)...');
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
     const sampleEvents = [
       {
-        title: 'HackSOA 2026 Hackathon',
-        description: 'Iterate, build, and pitch your ideas in this 24-hour hackathon. Great prizes and networking opportunities await!',
+        title: 'Red Bull Event 2026 — Live Campus Tracking',
+        description: 'Club Nexus (I7) presents the Red Bull Event 2026 live vehicle tracking experience. Watch the Red Bull car move across campus in real time on the CampusLink map, powered by our own GPS telemetry system built in-house.',
         start_time: now,
         end_time: tomorrow,
-        building_id: buildingsMap['electronic-office'],
-        organizing_club: 'Coding Club',
-        image_url: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-        registration_url: 'https://forms.gle/hacksoa2026',
-        floor: '3rd Floor',
-        room_number: 'Room 302',
-        is_approved: true
+        building_id: buildingsMap['auditorium'],
+        organizing_club: 'Club Nexus (I7)',
+        image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
+        registration_url: 'https://campuslink.in/rdbullevent_26/console',
+        floor: null,
+        room_number: null
       },
       {
         title: 'Robotics Workshop',
@@ -280,8 +239,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800',
         registration_url: 'https://forms.gle/robotics2026',
         floor: '2nd Floor',
-        room_number: 'Lab 204',
-        is_approved: true
+        room_number: 'Lab 204'
       },
       {
         title: 'Freshers Icebreaker Connect',
@@ -293,8 +251,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800',
         registration_url: 'https://forms.gle/lh3freshers',
         floor: 'Ground Floor',
-        room_number: 'Common Room',
-        is_approved: true
+        room_number: 'Common Room'
       },
       {
         title: 'SOA Cricket Championship',
@@ -306,8 +263,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800',
         registration_url: 'https://forms.gle/cricketchamp',
         floor: null,
-        room_number: null,
-        is_approved: true
+        room_number: null
       },
       {
         title: 'TechTalk: AI & Future Career',
@@ -319,8 +275,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1591115411636-609b556f312e?w=800',
         registration_url: 'https://forms.gle/ieeeai2026',
         floor: '1st Floor',
-        room_number: 'Seminar Hall 1',
-        is_approved: true
+        room_number: 'Seminar Hall 1'
       },
       {
         title: 'Hostel Quiz Night',
@@ -332,8 +287,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1518152006812-edab29b069ac?w=800',
         registration_url: 'https://forms.gle/bh1quiz',
         floor: 'Ground Floor',
-        room_number: 'TV Hall',
-        is_approved: true
+        room_number: 'TV Hall'
       },
       {
         title: 'Food Carnival & Live Music',
@@ -345,8 +299,7 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
         registration_url: 'https://forms.gle/foodmusic',
         floor: null,
-        room_number: null,
-        is_approved: true
+        room_number: null
       },
       {
         title: 'Mock Placement Drive',
@@ -358,17 +311,16 @@ async function run() {
         image_url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
         registration_url: 'https://forms.gle/mockplacement',
         floor: '4th Floor',
-        room_number: 'Placement Lab',
-        is_approved: false // defaults to pending/unapproved
+        room_number: 'Placement Lab'
       }
     ];
 
-    console.log('Seeding sample events...');
     for (const e of sampleEvents) {
       await dbClient.query(`
-        INSERT INTO events (title, description, start_time, end_time, building_id, organizing_club, image_url, registration_url, floor, room_number, is_approved)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      `, [e.title, e.description, e.start_time, e.end_time, e.building_id, e.organizing_club, e.image_url, e.registration_url, e.floor || null, e.room_number || null, e.is_approved]);
+        INSERT INTO events (title, description, start_time, end_time, building_id, organizing_club, image_url, registration_url, floor, room_number)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT DO NOTHING
+      `, [e.title, e.description, e.start_time, e.end_time, e.building_id, e.organizing_club, e.image_url, e.registration_url, e.floor || null, e.room_number || null]);
     }
 
     console.log('Events seeded successfully.');
@@ -439,14 +391,14 @@ async function run() {
       }
     ];
 
-    console.log('Seeding departments data...');
-    await dbClient.query('DELETE FROM departments');
+    console.log('Seeding departments data (dev only)...');
     for (const d of departmentsData) {
       const buildingId = buildingsMap[d.svg_element_id];
       if (buildingId) {
         await dbClient.query(`
           INSERT INTO departments (name, building_id, floor, room_number, aliases)
           VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (name, building_id, floor) DO NOTHING
         `, [d.name, buildingId, d.floor, d.room_number, d.aliases]);
       }
     }

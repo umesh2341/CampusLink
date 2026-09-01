@@ -14,6 +14,27 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   }
 }
 
+export const sendPushNotification = async (sub, payloadObj) => {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+  const pushSubscription = {
+    endpoint: sub.endpoint,
+    keys: {
+      p256dh: sub.p256dh_key,
+      auth: sub.auth_key,
+    },
+  };
+  try {
+    await webpush.sendNotification(pushSubscription, JSON.stringify(payloadObj));
+  } catch (err) {
+    if (err.statusCode === 410 || err.statusCode === 404) {
+      console.log(`Cleaning up expired push endpoint: ${sub.endpoint}`);
+      await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]);
+    } else {
+      console.error(`Push notification failed for endpoint ${sub.endpoint}:`, err.message);
+    }
+  }
+};
+
 export const dispatchEventPushNotification = async (event) => {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     console.warn('VAPID keys not configured. Skipping push notification dispatch.');
@@ -107,5 +128,44 @@ export const dispatchEventPushNotification = async (event) => {
     await Promise.allSettled(pushPromises);
   } catch (error) {
     console.error('Error dispatching push notifications:', error);
+  }
+};
+
+export const dispatchNoticePushNotification = async (notice) => {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.warn('VAPID keys not configured. Skipping push notification dispatch.');
+    return;
+  }
+
+  try {
+    // For notices, we don't filter by muted_club_ids (they are campus-wide)
+    // and we don't filter by enabled_tags (because Notice categories like 'exam', 'holiday' 
+    // are not part of the standard event tags like 'hackathon', 'cultural_event').
+    // Therefore, we send to all active push subscriptions.
+    const subsQuery = `SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions;`;
+    const { rows: subscriptions } = await pool.query(subsQuery);
+
+    if (subscriptions.length === 0) return;
+
+    // Construct payload
+    // We add type: 'notice' to differentiate it for the service worker click handler
+    const payload = JSON.stringify({
+      title: notice.title,
+      body: notice.category.toUpperCase() + ' NOTICE',
+      icon: '/icon-192x192.png',
+      data: {
+        url: notice.document_url || '/',
+        type: 'notice'
+      }
+    });
+
+    const pushPromises = subscriptions.map(async (sub) => {
+      // Reuse the existing single send method for each sub
+      await sendPushNotification(sub, JSON.parse(payload));
+    });
+
+    await Promise.allSettled(pushPromises);
+  } catch (error) {
+    console.error('Error dispatching notice push notifications:', error);
   }
 };

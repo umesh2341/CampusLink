@@ -10,7 +10,9 @@ function NavMenuDrawer({
   onOpenAbout,
   onOpenAddNotice,
   isOrganizer,
-  isCoAdmin,
+  isAuthority,
+  isAdmin,
+  onOpenAdminRequests,
 }) {
   const menuItems = [
     {
@@ -58,7 +60,21 @@ function NavMenuDrawer({
     },
   ];
 
-  if (isCoAdmin) {
+  if (isAdmin) {
+    menuItems.push({
+      id: 'admin_requests',
+      label: 'Admin Requests',
+      description: 'Review role requests',
+      icon: ExternalLink,
+      onClick: () => {
+        onClose();
+        if (onOpenAdminRequests) onOpenAdminRequests();
+      },
+      badge: 'ADMIN',
+    });
+  }
+
+  if (isAuthority) {
     menuItems.unshift({
       id: 'post_notice',
       label: 'Post Notice',
@@ -68,7 +84,7 @@ function NavMenuDrawer({
         onClose();
         if (onOpenAddNotice) onOpenAddNotice();
       },
-      badge: 'CO-ADMIN',
+      badge: 'AUTHORITY',
     });
   }
 

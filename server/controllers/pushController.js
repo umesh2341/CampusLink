@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import { sendPushNotification } from '../services/pushService.js';
 
 // GET /api/push/vapid-public-key
 export const getVapidPublicKey = (req, res) => {
@@ -11,7 +12,7 @@ export const getVapidPublicKey = (req, res) => {
 
 // POST /api/push/subscribe
 export const subscribePush = async (req, res) => {
-  const { endpoint, keys } = req.body;
+  const { endpoint, keys, userId } = req.body;
   if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
     return res.status(400).json({ error: 'Invalid push subscription payload' });
   }
@@ -19,13 +20,13 @@ export const subscribePush = async (req, res) => {
   try {
     // Upsert into push_subscriptions
     const subQuery = `
-      INSERT INTO push_subscriptions (endpoint, p256dh_key, auth_key)
-      VALUES ($1, $2, $3)
+      INSERT INTO push_subscriptions (endpoint, p256dh_key, auth_key, user_id)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (endpoint) 
-      DO UPDATE SET p256dh_key = EXCLUDED.p256dh_key, auth_key = EXCLUDED.auth_key
+      DO UPDATE SET p256dh_key = EXCLUDED.p256dh_key, auth_key = EXCLUDED.auth_key, user_id = EXCLUDED.user_id
       RETURNING *;
     `;
-    const { rows } = await pool.query(subQuery, [endpoint, keys.p256dh, keys.auth]);
+    const { rows } = await pool.query(subQuery, [endpoint, keys.p256dh, keys.auth, userId || null]);
     const subscription = rows[0];
 
     // Upsert default preferences row
@@ -120,6 +121,41 @@ export const updatePreferences = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating push preferences:', error);
-    res.status(500).json({ error: 'Failed to update push preferences' });
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+};
+
+// POST /api/push/notify-admins-role-request
+export const notifyAdminsRoleRequest = async (req, res) => {
+  const { requesterName, requesterEmail, requestedRole } = req.body;
+  if (!requesterName || !requestedRole) {
+    return res.status(400).json({ error: 'Missing requester details' });
+  }
+
+  try {
+    const adminQuery = `
+      SELECT ps.endpoint, ps.p256dh_key, ps.auth_key
+      FROM push_subscriptions ps
+      JOIN profiles p ON ps.user_id = p.id
+      WHERE p.role = 'admin';
+    `;
+    const { rows: adminSubscriptions } = await pool.query(adminQuery);
+
+    const payload = {
+      title: 'New Role Request',
+      body: `${requesterName} (${requesterEmail || 'No email'}) wants ${requestedRole} access.`,
+      icon: '/campuslink_logo_512.png',
+      data: { url: '/admin/requests' }
+    };
+
+    const results = await Promise.allSettled(
+      adminSubscriptions.map(sub => sendPushNotification(sub, payload))
+    );
+
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    res.json({ status: 'sent', attempted: adminSubscriptions.length, successful: successCount });
+  } catch (error) {
+    console.error('Error notifying admins:', error);
+    res.status(500).json({ error: 'Failed to notify admins' });
   }
 };

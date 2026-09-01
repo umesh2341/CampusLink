@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LocateFixed, Plus, Minus } from 'lucide-react';
+import { LocateFixed, Plus, Minus, Type } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
 import LiveUserMarker from './LiveUserMarker';
+import RedBullMapMarker from './RedBullMapMarker';
+import NavigationRouteLayer from './components/NavigationRouteLayer';
+import NavigationHUD from './components/NavigationHUD';
 import { buildingCoords } from '../../shared/lib/buildingCoords';
 import useAppStore from '../../shared/store/useAppStore';
 
@@ -15,6 +18,16 @@ function InteractiveMap({
   userLocation = null,
   isGpsAcquiring = false,
   isOffCampus = false,
+  route = null,
+  navigationStatus = 'idle',
+  navigationError = null,
+  onStopNavigation = null,
+  destinationBuilding = null,
+  transportMode = 'WALK',
+  onSetTransportMode = null,
+  onSelectRedBull = null,
+  redBullVehicleState = null,
+  onRedBullStateUpdate = null,
 }) {
   const viewportRef = useRef(null);
   const containerRef = useRef(null);
@@ -30,6 +43,7 @@ function InteractiveMap({
   const [pan, setPanState] = useState(() => savedPan ?? { x: 0, y: 10 });
   const [isDragging, setIsDragging] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
 
   // Refs for latest values (avoids effect re-registration)
   const zoomRef = useRef(savedZoom ?? 0.25);
@@ -50,7 +64,7 @@ function InteractiveMap({
 
   // These multipliers are applied to the initial 'fit to viewport' zoom level
   // Adjust these to control how far users can zoom out on different devices
-  const MIN_ZOOM_MOBILE = 0.90;
+  const MIN_ZOOM_MOBILE = 1.6;
   const MIN_ZOOM_DESKTOP = 2.4;
 
   const getFitZoom = () => {
@@ -189,7 +203,7 @@ function InteractiveMap({
         el.style.transition = 'opacity 0.2s ease, stroke 0.2s ease';
 
         const clickHandler = (e) => {
-          if (dragDistanceRef.current > 6) return;
+          if (dragDistanceRef.current > 16) return;
           e.stopPropagation();
           onSelectBuilding(building);
         };
@@ -280,7 +294,7 @@ function InteractiveMap({
       hasAutoCenteredUserRef.current = false;
       return;
     }
-    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding) {
+    if (!hasAutoCenteredUserRef.current && viewportRef.current && !selectedBuilding && !route) {
       hasAutoCenteredUserRef.current = true;
       const vp = viewportRef.current;
       const vpWidth = vp.clientWidth;
@@ -290,7 +304,44 @@ function InteractiveMap({
       const newPanY = vpHeight / 2 - userLocation.y * targetZoom;
       updateTransform(targetZoom, { x: newPanX, y: newPanY });
     }
-  }, [userLocation, selectedBuilding]);
+  }, [userLocation, selectedBuilding, route]);
+
+  // Auto-fit map viewport to show the full route when navigation starts or changes
+  const lastFittedRouteTsRef = useRef(null);
+  useEffect(() => {
+    if (route && route.coordinates && route.coordinates.length > 0 && viewportRef.current) {
+      if (lastFittedRouteTsRef.current === route.timestamp) return;
+      lastFittedRouteTsRef.current = route.timestamp;
+
+      const vp = viewportRef.current;
+      const vWidth = vp.clientWidth;
+      const vHeight = vp.clientHeight;
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      route.coordinates.forEach((pt) => {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+      });
+
+      const routeWidth = Math.max(160, maxX - minX);
+      const routeHeight = Math.max(160, maxY - minY);
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      // Allow comfortable padding for header, HUD at top, and controls at bottom
+      const scaleX = (vWidth * 0.70) / routeWidth;
+      const scaleY = (vHeight * 0.55) / routeHeight;
+      const minZ = getMinZoom();
+      const targetZoom = Math.min(2.2, Math.max(minZ, Math.min(scaleX, scaleY)));
+
+      const targetPanX = vWidth / 2 - centerX * targetZoom;
+      const targetPanY = vHeight / 2 - centerY * targetZoom;
+
+      updateTransform(targetZoom, { x: targetPanX, y: targetPanY });
+    }
+  }, [route]);
 
   // Desktop Mouse Drag Handlers
   const handleMouseDown = (e) => {
@@ -546,6 +597,15 @@ function InteractiveMap({
               );
             })}
 
+            {/* Directional Navigation Route Layer */}
+            {route && (
+              <NavigationRouteLayer
+                route={route}
+                userLocation={userLocation}
+                destinationBuilding={destinationBuilding}
+              />
+            )}
+
             {/* Live User Location Beacon Marker */}
             {userLocation && userLocation.x !== null && userLocation.y !== null && (
               <LiveUserMarker
@@ -558,9 +618,110 @@ function InteractiveMap({
                 transitionMs={userLocation.transitionMs ?? 1500}
               />
             )}
+
+            {/* Live Red Bull Vehicle Marker */}
+            <RedBullMapMarker
+              onClick={onSelectRedBull}
+              onVehicleStateUpdate={onRedBullStateUpdate}
+            />
           </div>
+          {/* Lowered the zoom threshold from 0.55 to 0.25 so labels stay visible longer when zoomed out */}
+          {showLabels && zoom >= 0.25 && (
+            <div className="absolute inset-0 pointer-events-none select-none z-15">
+              {buildings.map((building) => {
+                const coords = buildingCoords[building.svg_element_id];
+                if (!coords || building.hide_label || (!building.short_name && !building.name)) return null;
+
+                const left = (coords.x / 1580) * 100;
+                const top = (coords.y / 2891) * 100;
+
+                // --- DYNAMIC SCALING CALCULATIONS ---
+                const dynamicFontSize = Math.max(30, Math.min(60, 30 / zoom));
+
+                // --- STRICT 2-ROW BREAKING LOGIC ---
+                const displayName = building.short_name || building.name;
+                const isZoomedOut = zoom < 0.8;
+
+                let formattedName = displayName;
+
+                if (isZoomedOut) {
+                  const words = displayName.split(' ');
+                  if (words.length > 1) {
+                    // Finds the middle of the name and splits it into exactly 2 lines
+                    const midPoint = Math.ceil(words.length / 2);
+                    const firstHalf = words.slice(0, midPoint).join(' ');
+                    const secondHalf = words.slice(midPoint).join(' ');
+                    formattedName = `${firstHalf}\n${secondHalf}`;
+                  }
+                }
+                // ------------------------------------
+
+                return (
+                  <div
+                    key={`label-${building.id}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'Jaini Purva','VT323', monospace",
+                        fontSize: `${dynamicFontSize}px`,
+                        fontWeight: 'normal',
+
+                        lineHeight: '0.6',
+                        color: '#F49A57',
+
+                        textShadow: `
+                      -1px -1px 0 #121212,  
+                       1px -1px 0 #121212,
+                      -1px  1px 0 #121212,
+                       1px  1px 0 #121212,
+                       3px  4px 0 rgba(0, 0, 0, 0.55)
+                    `,
+
+                        display: 'inline-block',
+                        textAlign: 'center',
+
+                        // Use 'pre' when zoomed out to strictly honor our \n break and ignore everything else
+                        whiteSpace: isZoomedOut ? 'pre' : 'nowrap',
+
+                        // Removed maxWidth and wordWrap completely so CSS doesn't accidentally force a 3rd line
+
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        transform: 'rotate(0deg)',
+                        userSelect: 'none',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                      }}
+                    >
+                      {formattedName}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ── Active Route Guidance HUD Dock ── */}
+      <NavigationHUD
+        activeRoute={route}
+        destinationBuilding={destinationBuilding}
+        navigationStatus={navigationStatus}
+        navigationError={navigationError}
+        transportMode={transportMode}
+        onStopNavigation={onStopNavigation}
+        onSetTransportMode={onSetTransportMode}
+      />
 
       {/* ── Persistent Map Control Dock (Elevated above bottom nav) ── */}
       <div className="absolute bottom-4 right-3 sm:right-5 z-40 flex flex-col items-end gap-1.5 sm:gap-2 pointer-events-auto select-none max-w-[calc(100vw-24px)]">
@@ -617,26 +778,43 @@ function InteractiveMap({
             </button>
           )}
 
-          {/* Smooth Zoom Controls (+ / -) */}
-          <div className="flex flex-col border-2 border-ink bg-card rounded-xs shadow-hard overflow-hidden">
+          {/* Label toggle + Zoom controls stacked in same column */}
+          <div className="flex flex-col items-center gap-1">
+            {/* Building Name Label Toggle */}
             <button
               type="button"
-              onClick={handleZoomIn}
-              title="Zoom In"
-              aria-label="Zoom in on map"
-              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper border-b border-ink text-ink transition-colors flex items-center justify-center cursor-pointer"
+              onClick={() => setShowLabels(v => !v)}
+              title={showLabels ? 'Hide building labels' : 'Show building labels'}
+              aria-label="Toggle building name labels"
+              className={`border-2 border-ink bg-card rounded-xs shadow-hard p-1.5 sm:p-2 flex items-center justify-center cursor-pointer transition-colors ${showLabels
+                ? 'bg-ink text-paper'
+                : 'hover:bg-paper text-ink'
+                }`}
             >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              title="Zoom Out"
-              aria-label="Zoom out on map"
-              className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper text-ink transition-colors flex items-center justify-center cursor-pointer"
-            >
-              <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
+
+            {/* Smooth Zoom Controls (+ / -) */}
+            <div className="flex flex-col border-2 border-ink bg-card rounded-xs shadow-hard overflow-hidden">
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                title="Zoom In"
+                aria-label="Zoom in on map"
+                className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper border-b border-ink text-ink transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                title="Zoom Out"
+                aria-label="Zoom out on map"
+                className="p-1.5 sm:p-2 hover:bg-paper active:bg-ink active:text-paper text-ink transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

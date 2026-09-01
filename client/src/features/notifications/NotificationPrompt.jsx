@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { subscribeUserToPush } from '../../shared/lib/pushNotifications';
+import { useAuth } from '../../shared/context/AuthContext';
 
 const DISMISS_KEY = 'campuslink_push_prompt_dismissed';
 const DISMISS_DAYS = 7;
@@ -10,6 +11,7 @@ function NotificationPrompt() {
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
     // Check if push notifications are supported and permission is pending
@@ -36,8 +38,8 @@ function NotificationPrompt() {
     setLoading(true);
     setStatusMsg('');
     try {
-      await subscribeUserToPush();
-      setStatusMsg('SUBSCRIBED TO CAMPUS ALERTS!');
+      await subscribeUserToPush(user?.id);
+      setStatusMsg('Notifications enabled successfully!');
       setTimeout(() => setIsVisible(false), 2000);
     } catch (err) {
       console.error('Push Subscription Error:', err);

@@ -1,10 +1,12 @@
 import express from 'express';
+import { requireAuth } from '../middleware/auth.js';
 import {
   getVapidPublicKey,
   subscribePush,
   unsubscribePush,
   getPreferences,
   updatePreferences,
+  notifyAdminsRoleRequest,
 } from '../controllers/pushController.js';
 
 const router = express.Router();
@@ -14,5 +16,6 @@ router.post('/subscribe', subscribePush);
 router.post('/unsubscribe', unsubscribePush);
 router.get('/preferences', getPreferences);
 router.patch('/preferences', updatePreferences);
+router.post('/notify-admins-role-request', requireAuth, notifyAdminsRoleRequest);
 
 export default router;

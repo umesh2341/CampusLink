@@ -2,22 +2,25 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Search, ChevronRight, Sparkles, Filter } from 'lucide-react';
 
-const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY'];
+const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY', 'OFFICIAL'];
 
 function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub, isLoading }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
-  // Compute active event counts per club name
+  // Compute active event counts per club (by id preferred, fallback to name match)
   const clubEventCounts = useMemo(() => {
-    const counts = {};
+    const countById = {};
+    const countByName = {};
     activeEvents.forEach((evt) => {
-      if (evt.organizing_club) {
+      if (evt.club_id) {
+        countById[evt.club_id] = (countById[evt.club_id] || 0) + 1;
+      } else if (evt.organizing_club) {
         const key = evt.organizing_club.toLowerCase();
-        counts[key] = (counts[key] || 0) + 1;
+        countByName[key] = (countByName[key] || 0) + 1;
       }
     });
-    return counts;
+    return { byId: countById, byName: countByName };
   }, [activeEvents]);
 
   // Filter clubs by category and search text
@@ -132,9 +135,8 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
             ) : (
               filteredClubs.map((club) => {
                 const activeCount =
-                  clubEventCounts[club.name.toLowerCase()] ||
-                  clubEventCounts[club.name.toLowerCase().replace('club', '').trim()] ||
-                  0;
+                  (clubEventCounts.byId[club.id] || 0) +
+                  (clubEventCounts.byName[club.name.toLowerCase()] || 0);
 
                 return (
                   <motion.div
@@ -148,7 +150,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
                       <img
                         src={club.logo_url}
                         alt={club.name}
-                        className="w-11 h-11 rounded-xs border-2 border-ink bg-paper object-cover shrink-0"
+                        className="w-11 h-11 rounded-full border-2 border-ink bg-paper object-cover shrink-0"
                         onError={(e) => {
                           e.target.src =
                             'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=160';

@@ -1,8 +1,44 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Calendar, Instagram, MessageSquare, ShieldCheck } from 'lucide-react';
+import { X, Users, Calendar, Instagram, ShieldCheck, Linkedin } from 'lucide-react';
 
 function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent }) {
+<<<<<<< HEAD
+=======
+  if (!isOpen || !club) return null;
+
+  // Filter events organized by this club (by club_id, falling back to name match for old events)
+  const clubEvents = activeEvents.filter(
+    (e) => e.club_id === club.id || (e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase()))
+  );
+
+  // Consolidate social handles
+  const rawSocials = typeof club.social_handles === 'string' ? JSON.parse(club.social_handles) : (club.social_handles || {});
+  const socialLinks = [];
+
+  const instagramHandle = rawSocials.instagram || club.instagram;
+  if (instagramHandle) {
+    socialLinks.push({
+      type: 'instagram',
+      label: `@${instagramHandle}`,
+      url: `https://instagram.com/${instagramHandle}`,
+      icon: Instagram,
+      iconClass: 'text-signal'
+    });
+  }
+
+  const linkedinHandle = rawSocials.linkedin;
+  if (linkedinHandle) {
+    socialLinks.push({
+      type: 'linkedin',
+      label: `@${linkedinHandle}`,
+      url: `https://linkedin.com/company/${linkedinHandle}`,
+      icon: Linkedin,
+      iconClass: 'text-[#0A66C2]'
+    });
+  }
+
+>>>>>>> origin/main
   return (
     <AnimatePresence>
       {isOpen && club && (() => {
@@ -69,7 +105,7 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
                 <img
                   src={club.logo_url}
                   alt={club.name}
-                  className="w-14 h-14 rounded-xs border-2 border-ink bg-paper object-cover shrink-0 shadow-hard -mt-10 relative z-10"
+                  className="w-14 h-14 rounded-full border-2 border-ink bg-paper object-cover shrink-0 shadow-hard -mt-10 relative z-10"
                   onError={(e) => {
                     e.target.src = 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=160';
                   }}
@@ -114,37 +150,22 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
                 [ OFFICIAL CHANNELS ]
               </span>
               <div className="grid grid-cols-2 gap-2">
-                {club.instagram ? (
-                  <a
-                    href={`https://instagram.com/${club.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-2 bg-paper border-2 border-ink rounded-xs text-xs font-bold text-ink hover:bg-ink hover:text-paper active:translate-y-[1px] transition-all"
-                  >
-                    <Instagram className="w-3.5 h-3.5 text-signal" />
-                    <span className="truncate">@{club.instagram}</span>
-                  </a>
+                {socialLinks.length > 0 ? (
+                  socialLinks.map((link) => (
+                    <a
+                      key={link.type}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 p-2 bg-paper border-2 border-ink rounded-xs text-xs font-bold text-ink hover:bg-ink hover:text-paper active:translate-y-[1px] transition-all"
+                    >
+                      <link.icon className={`w-3.5 h-3.5 ${link.iconClass}`} />
+                      <span className="truncate">{link.label}</span>
+                    </a>
+                  ))
                 ) : (
-                  <div className="flex items-center justify-center gap-1 p-2 bg-paper/50 border border-ink/20 rounded-xs text-[11px] text-muted">
-                    <Instagram className="w-3.5 h-3.5" />
-                    <span>NO INSTAGRAM</span>
-                  </div>
-                )}
-
-                {club.discord ? (
-                  <a
-                    href={club.discord}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-2 bg-paper border-2 border-ink rounded-xs text-xs font-bold text-ink hover:bg-ink hover:text-paper active:translate-y-[1px] transition-all"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-confirm" />
-                    <span>DISCORD</span>
-                  </a>
-                ) : (
-                  <div className="flex items-center justify-center gap-1 p-2 bg-paper/50 border border-ink/20 rounded-xs text-[11px] text-muted">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>CAMPUS ONLY</span>
+                  <div className="col-span-2 flex items-center justify-center gap-1 p-2 bg-paper/50 border border-ink/20 rounded-xs text-[11px] text-muted">
+                    <span>CAMPUS ONLY (NO SOCIALS)</span>
                   </div>
                 )}
               </div>

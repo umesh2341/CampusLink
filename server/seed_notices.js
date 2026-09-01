@@ -2,6 +2,13 @@ import pool from './db/pool.js';
 import 'dotenv/config';
 
 async function seedNotices() {
+  // PRODUCTION GUARD: this script must NEVER run automatically in production.
+  // Run manually only for local dev: NODE_ENV=development node server/seed_notices.js
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ ABORTED: seed_notices.js refused to run in NODE_ENV=production. Real production data is preserved.');
+    process.exit(1);
+  }
+
   try {
     console.log('Ensuring notices table exists...');
     await pool.query(`
@@ -21,9 +28,7 @@ async function seedNotices() {
     console.log('Adding document_url column...');
     await pool.query(`ALTER TABLE notices ADD COLUMN IF NOT EXISTS document_url TEXT;`);
 
-    console.log('Seeding 3 test notices...');
-    // Delete existing test notices to avoid duplicates on multiple runs
-    await pool.query(`DELETE FROM notices;`);
+    console.log('Inserting sample notices (skips if title already exists)...');
 
     const notices = [
       {
@@ -50,6 +55,7 @@ async function seedNotices() {
       await pool.query(`
         INSERT INTO notices (title, category, body, document_url, published_at)
         VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT DO NOTHING
       `, [notice.title, notice.category, notice.body, notice.document_url || null]);
     }
 
