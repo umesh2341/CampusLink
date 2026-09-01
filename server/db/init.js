@@ -106,32 +106,7 @@ async function run() {
 
     console.log('Buildings table ensured.');
 
-    // Add columns that controllers query but may not exist on older schemas
-    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS slug VARCHAR(255);`);
-    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS entrance_x NUMERIC;`);
-    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS entrance_y NUMERIC;`);
-    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS description TEXT;`);
-    await dbClient.query(`ALTER TABLE buildings ADD COLUMN IF NOT EXISTS contact_info TEXT;`);
-    console.log('Buildings columns ensured.');
-
-    // Create clubs table BEFORE events (events.club_id references clubs.id)
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS clubs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL UNIQUE,
-        category VARCHAR(100),
-        description TEXT,
-        logo_url TEXT,
-        banner_url TEXT,
-        instagram VARCHAR(255),
-        discord VARCHAR(500),
-        lead_name VARCHAR(255),
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    console.log('Clubs table ensured.');
-
-    // Create events table (after buildings and clubs exist for FKs)
+    // Create events table
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS events (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
