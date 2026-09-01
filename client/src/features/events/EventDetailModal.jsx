@@ -156,12 +156,11 @@ function EventDetailModal({ event, isOpen, onClose }) {
             {/* ── CTA Button (tactile press) ── */}
             {event.registration_url && (
               <div className="border-t-2 border-ink p-4 bg-paper shrink-0">
-                <motion.a href={event.registration_url} target="_blank" rel="noopener noreferrer"
-                  whileTap={{ y: 2 }}
-                  className="w-full flex items-center justify-center gap-2 bg-signal text-ink font-bold text-xs sm:text-sm uppercase tracking-wider py-3 px-4 rounded-xs border-2 border-ink shadow-hard transition-all">
+                <a href={event.registration_url} target="_blank" rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 bg-signal text-ink font-bold text-xs sm:text-sm uppercase tracking-wider py-3 px-4 rounded-xs border-2 border-ink shadow-hard active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
                   <span>REGISTER FOR EVENT</span>
                   <ArrowUpRight className="w-4 h-4" />
-                </motion.a>
+                </a>
               </div>
             )}
           </motion.div>
