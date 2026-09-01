@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Calendar, Instagram, ShieldCheck, Linkedin } from 'lucide-react';
 
 function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent }) {
-<<<<<<< HEAD
-=======
   if (!isOpen || !club) return null;
 
   // Filter events organized by this club (by club_id, falling back to name match for old events)
@@ -38,16 +36,9 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
     });
   }
 
->>>>>>> origin/main
   return (
     <AnimatePresence>
-      {isOpen && club && (() => {
-        const clubEvents = activeEvents.filter(
-          (e) => e.club_id === club.id || (e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase()))
-        );
-
-        return (
-      <div key="club-card" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -231,8 +222,6 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
           </div>
         </motion.div>
       </div>
-        );
-      })()}
     </AnimatePresence>
   );
 }

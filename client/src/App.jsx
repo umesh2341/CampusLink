@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from './shared/lib/auth';
 import InteractiveMap from './features/map/InteractiveMap';
 import SidePanel from './features/events/SidePanel';
 import EventDetailModal from './features/events/EventDetailModal';
@@ -13,7 +12,6 @@ import {
   fetchNotices,
   updateUserLocation,
   stopUserLocationSharing,
-  authFetch,
   API_BASE,
 } from './shared/lib/api';
 import {
@@ -55,12 +53,7 @@ import {
   Navigation,
   ClipboardList,
   LogOut,
-<<<<<<< HEAD
-  LogIn,
-  Loader2,
-=======
   AlertCircle
->>>>>>> origin/main
 } from 'lucide-react';
 
 function AppContent() {
@@ -82,15 +75,12 @@ function AppContent() {
   const [currentView,         setCurrentView]         = useState('map');
   const [selectedClub,        setSelectedClub]        = useState(null);
   const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false); // Can stack on top of directories
-<<<<<<< HEAD
-=======
   const [isAdminRequestsModalOpen, setIsAdminRequestsModalOpen] = useState(false);
   
   // Real auth logic replaces local states
   const isOrganizer = profile?.role === 'organizer' || profile?.role === 'admin';
   const isAuthority = profile?.role === 'authority' || profile?.role === 'admin';
   
->>>>>>> origin/main
   const [allActiveEvents,     setAllActiveEvents]     = useState([]);
   const [redBullVehicleState, setRedBullVehicleState] = useState(null);
   const [isRedBullModalOpen,  setIsRedBullModalOpen]  = useState(false);
@@ -98,15 +88,6 @@ function AppContent() {
   const [isNoticeBannerDismissed, setIsNoticeBannerDismissed] = useState(
     () => sessionStorage.getItem('notices_dismissed') === 'true'
   );
-
-  // ── Auth state (Supabase) ───────────────────────────────────
-  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
-  const isAuthenticated = !!user;
-
-  // Derive role flags from authenticated user profile
-  // (RBAC is NOT implemented yet — these remain true for all authenticated users)
-  const isOrganizer = isAuthenticated;
-  const isCoAdmin = isAuthenticated;
 
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
@@ -181,7 +162,7 @@ function AppContent() {
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('event_id');
     if (eventId) {
-      authFetch(`${API_BASE}/api/events/${eventId}`)
+      fetch(`${API_BASE}/api/events/${eventId}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((eventData) => {
           if (eventData) {
@@ -202,7 +183,7 @@ function AppContent() {
 
   const { data: buildingEvents = [] } = useQuery({
     queryKey: ['buildingEvents', selectedBuilding?.id],
-    queryFn: () => fetchBuildingEvents(selectedBuilding?.id),
+    queryFn: () => fetchBuildingEvents(selectedBuilding.id),
     enabled: !!selectedBuilding?.id,
     staleTime: 60_000,
   });
@@ -591,7 +572,7 @@ function AppContent() {
             <span>{isGpsAcquiring ? 'ACQUIRING...' : isOffCampus ? 'OFF CAMPUS' : isLiveLocationActive ? 'LIVE: ON' : 'TRACKER'}</span>
           </button>
 
-          {isAuthenticated && isOrganizer && (
+          {isOrganizer && (
             <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] font-bold bg-signal text-ink border-2 border-ink px-2 py-0.5 rounded-xs uppercase">
               <UserCheck className="w-3.5 h-3.5" />
               ORGANIZER
@@ -744,34 +725,6 @@ function AppContent() {
                 </button>
               </div>
 
-<<<<<<< HEAD
-              {authLoading ? (
-                <div className="p-6 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-signal" />
-                </div>
-              ) : isAuthenticated ? (
-                /* ── Authenticated state ── */
-                <>
-                  <div className="flex items-center gap-3">
-                    {user.user_metadata?.avatar_url ? (
-                      <img
-                        src={user.user_metadata.avatar_url}
-                        alt="Profile"
-                        className="w-10 h-10 rounded-xs border-2 border-ink object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xs bg-ink text-paper border-2 border-ink flex items-center justify-center font-display text-lg font-bold uppercase">
-                        {(user.user_metadata?.full_name || user.email || 'U').substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="text-sm font-bold text-ink uppercase">
-                        {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-                      </h4>
-                      <span className="text-xs text-muted">
-                        {user.email || 'Authenticated via Google'}
-                      </span>
-=======
               {isLoading ? (
                 <div className="flex justify-center p-4">
                   <span className="font-mono text-xs font-bold tracking-widest uppercase text-muted animate-pulse">LOADING...</span>
@@ -789,51 +742,10 @@ function AppContent() {
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-ink uppercase truncate">{profile?.full_name || user.user_metadata?.full_name || 'USER'}</h4>
                       <span className="text-xs text-muted block truncate">{user.email}</span>
->>>>>>> origin/main
                     </div>
                   </div>
                   <div className="flex items-center justify-between border-t-2 border-ink/10 pt-3">
                     <div>
-<<<<<<< HEAD
-                      <span className="text-xs font-bold text-ink block uppercase">ORGANIZER ACCESS</span>
-                      <span className="text-[10px] text-muted">— authenticated user</span>
-                    </div>
-                    <span className="text-xs font-bold text-signal">ACTIVE</span>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      await signOut();
-                      closeOverlay();
-                    }}
-                    className="w-full flex items-center justify-center gap-2 bg-paper text-ink font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xs border-2 border-ink hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>SIGN OUT</span>
-                  </button>
-                </>
-              ) : (
-                /* ── Not authenticated ── */
-                <>
-                  <div className="text-center space-y-3 py-2">
-                    <div className="w-12 h-12 rounded-xs bg-signal/20 border-2 border-ink flex items-center justify-center mx-auto">
-                      <User className="w-6 h-6 text-signal" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-ink uppercase">SIGN IN TO CAMPUSLINK</h4>
-                      <p className="text-xs text-muted mt-1">
-                        Use your Google account to access event creation, notifications, and live location features.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={signInWithGoogle}
-                    className="w-full flex items-center justify-center gap-2 bg-signal text-ink font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xs border-2 border-ink shadow-hard active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>CONTINUE WITH GOOGLE</span>
-                  </button>
-                </>
-=======
                       <span className="text-xs font-bold text-ink block uppercase">ACCOUNT ROLE</span>
                       <span className="text-[10px] text-muted uppercase">— {profile?.role || 'USER'}</span>
                     </div>
@@ -926,7 +838,6 @@ function AppContent() {
                     SIGN IN WITH GOOGLE
                   </button>
                 </div>
->>>>>>> origin/main
               )}
             </motion.div>
           </div>
@@ -1066,25 +977,23 @@ function AppContent() {
           </AnimatePresence>
         </button>
 
-        <motion.button onClick={async () => {
+        <button onClick={async () => {
           if (allActiveEvents.length === 0) {
             const evts = await fetchAllActiveEvents();
             setAllActiveEvents(evts);
           }
           switchOverlay('CLUBS');
         }}
-          whileTap={{ y: 2 }}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>
-        </motion.button>
+        </button>
 
-        <motion.button onClick={() => switchOverlay('PROFILE')}
-          whileTap={{ y: 2 }}
-          className="flex flex-col items-center gap-1 text-ink hover:text-signal transition-all focus:outline-none py-0.5">
+        <button onClick={() => switchOverlay('PROFILE')}
+          className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <User className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">PROFILE</span>
-        </motion.button>
+        </button>
       </nav>
 
       {/* Custom In-App Web Push Notification Prompt */}
@@ -1116,4 +1025,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
