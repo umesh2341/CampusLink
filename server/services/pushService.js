@@ -132,20 +132,41 @@ export const dispatchNoticePushNotification = async (notice) => {
   }
 
   try {
-    // For notices, we don't filter by muted_club_ids (they are campus-wide)
-    // and we don't filter by enabled_tags (because Notice categories like 'exam', 'holiday' 
-    // are not part of the standard event tags like 'hackathon', 'cultural_event').
-    // Therefore, we send to all active push subscriptions.
-    const subsQuery = `SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions;`;
+    const targetYear = notice.target_year || 'everyone';
+
+    // Join push_subscriptions with subscription_preferences to get notification_years
+    const subsQuery = `
+      SELECT ps.id AS sub_id, ps.endpoint, ps.p256dh_key, ps.auth_key,
+             sp.notification_years
+      FROM push_subscriptions ps
+      LEFT JOIN subscription_preferences sp ON ps.id = sp.subscription_id;
+    `;
     const { rows: subscriptions } = await pool.query(subsQuery);
 
     if (subscriptions.length === 0) return;
 
+    // Filter: only send to users whose notification_years include the notice's target_year
+    const matchingSubs = subscriptions.filter((sub) => {
+      // If target is 'everyone', send to all users with any notification_years
+      if (targetYear === 'everyone') return true;
+
+      // If user has no preferences row or null notification_years, default to all years (backward compat)
+      const userYears = Array.isArray(sub.notification_years) && sub.notification_years.length > 0
+        ? sub.notification_years
+        : ['1st', '2nd', '3rd', '4th'];
+
+      return userYears.includes(targetYear);
+    });
+
+    if (matchingSubs.length === 0) {
+      console.log(`Notice "${notice.title}" (target: ${targetYear}) — no matching subscribers.`);
+      return;
+    }
+
     // Construct payload
-    // We add type: 'notice' to differentiate it for the service worker click handler
     const payload = JSON.stringify({
       title: notice.title,
-      body: notice.category.toUpperCase() + ' NOTICE',
+      body: notice.category.toUpperCase() + ' NOTICE' + (targetYear !== 'everyone' ? ` — ${targetYear} Year` : ''),
       icon: '/icon-192x192.png',
       data: {
         url: notice.document_url || '/',
@@ -153,8 +174,7 @@ export const dispatchNoticePushNotification = async (notice) => {
       }
     });
 
-    const pushPromises = subscriptions.map(async (sub) => {
-      // Reuse the existing single send method for each sub
+    const pushPromises = matchingSubs.map(async (sub) => {
       await sendPushNotification(sub, JSON.parse(payload));
     });
 

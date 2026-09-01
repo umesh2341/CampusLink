@@ -152,10 +152,25 @@ async function run() {
         published_at TIMESTAMPTZ DEFAULT NOW(),
         expires_at TIMESTAMPTZ,
         document_url TEXT,
+        target_year VARCHAR(20) NOT NULL DEFAULT 'everyone',
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
     console.log('Notices table ensured.');
+
+    // Ensure subscription_preferences has notification_years column
+    await dbClient.query(`
+      ALTER TABLE subscription_preferences
+        ADD COLUMN IF NOT EXISTS notification_years TEXT[]
+        NOT NULL DEFAULT ARRAY['1st','2nd','3rd','4th'];
+    `).catch(() => {});
+    // Backfill existing NULL values
+    await dbClient.query(`
+      UPDATE subscription_preferences
+      SET notification_years = ARRAY['1st','2nd','3rd','4th']
+      WHERE notification_years IS NULL;
+    `).catch(() => {});
+    console.log('subscription_preferences.notification_years ensured.');
 
     // ── BUILDINGS (safe upsert, always runs) ───────────────────────────────
     console.log('Seeding buildings data...');

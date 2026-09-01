@@ -19,6 +19,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
   const [clubs, setClubs] = useState([]);
   const [enabledTags, setEnabledTags] = useState(['hackathon', 'tech_event', 'workshop', 'cultural_event', 'college_official']);
   const [mutedClubIds, setMutedClubIds] = useState([]);
+  const [notificationYears, setNotificationYears] = useState(['1st', '2nd', '3rd', '4th']);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [subscribing, setSubscribing] = useState(false);
@@ -73,6 +74,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         const prefData = await prefRes.json();
         if (Array.isArray(prefData.enabled_tags)) setEnabledTags(prefData.enabled_tags);
         if (Array.isArray(prefData.muted_club_ids)) setMutedClubIds(prefData.muted_club_ids);
+        if (Array.isArray(prefData.notification_years)) setNotificationYears(prefData.notification_years);
       }
     } catch (err) {
       console.error('Error loading push preferences:', err);
@@ -99,7 +101,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? enabledTags.filter(t => t !== tagId)
       : [...enabledTags, tagId];
     setEnabledTags(next);
-    savePreferences(next, mutedClubIds);
+    savePreferences(next, mutedClubIds, notificationYears);
   };
 
   const toggleClub = (clubId) => {
@@ -107,10 +109,22 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? mutedClubIds.filter(id => id !== clubId)
       : [...mutedClubIds, clubId];
     setMutedClubIds(nextMuted);
-    savePreferences(enabledTags, nextMuted);
+    savePreferences(enabledTags, nextMuted, notificationYears);
   };
 
-  const savePreferences = async (tags, mutedClubs) => {
+  const VALID_YEARS = ['1st', '2nd', '3rd', '4th'];
+
+  const toggleYear = (year) => {
+    const next = notificationYears.includes(year)
+      ? notificationYears.filter(y => y !== year)
+      : [...notificationYears, year];
+    // Prevent deselecting all years — at least one must remain
+    if (next.length === 0) return;
+    setNotificationYears(next);
+    savePreferences(enabledTags, mutedClubIds, next);
+  };
+
+  const savePreferences = async (tags, mutedClubs, years) => {
     if (!subscription) return;
     setSaving(true);
     try {
@@ -121,6 +135,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
           endpoint: subscription.endpoint,
           enabled_tags: tags,
           muted_club_ids: mutedClubs,
+          notification_years: years,
         }),
       });
 
@@ -253,7 +268,39 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Section 2: Campus Clubs */}
+              {/* Section 2: Notice Year Preferences */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-muted border-b border-ink/20 pb-1">
+                  <span>[ Notice Notifications ]</span>
+                  <span>{notificationYears.length}/{VALID_YEARS.length} YEARS</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {VALID_YEARS.map(year => {
+                    const isChecked = notificationYears.includes(year);
+                    return (
+                      <div
+                        key={year}
+                        onClick={() => toggleYear(year)}
+                        className={`p-2.5 rounded-xs border-2 border-ink flex items-center justify-between cursor-pointer transition-all ${
+                          isChecked ? 'bg-card' : 'bg-paper opacity-60'
+                        }`}
+                      >
+                        <span className="text-xs font-bold uppercase text-ink">{year} Year</span>
+                        <div
+                          className={`w-5 h-5 border-2 border-ink rounded-xs flex items-center justify-center transition-colors ${
+                            isChecked ? 'bg-signal text-ink' : 'bg-paper'
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 3: Campus Clubs */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-muted border-b border-ink/20 pb-1">
                   <span>[ Subscribed Clubs ]</span>

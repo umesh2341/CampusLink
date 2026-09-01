@@ -48,9 +48,7 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
             ) : (
               notices.map((notice) => {
                 const hasDoc = !!notice.document_url;
-                return (
-                  <div
-                    key={notice.id}
+                return (                  <div key={notice.id}
                     onClick={() => hasDoc && window.open(notice.document_url, '_blank')}
                     className={`p-4 bg-paper border-2 border-ink rounded-xs shadow-hard ${
                       hasDoc ? 'cursor-pointer hover:bg-card active:translate-y-[1px] transition-all' : ''
@@ -60,6 +58,16 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
                       <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-signal text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0">
                         {notice.category}
                       </span>
+                      {notice.target_year && notice.target_year !== 'everyone' && (
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-ink text-paper border border-ink px-1.5 py-0.5 rounded-xs shrink-0">
+                          {notice.target_year} YEAR
+                        </span>
+                      )}
+                      {notice.target_year === 'everyone' && (
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted border border-ink/20 px-1.5 py-0.5 rounded-xs shrink-0">
+                          ALL YEARS
+                        </span>
+                      )}
                       <span className="text-[10px] text-muted font-bold uppercase truncate">
                         {new Date(notice.published_at).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
