@@ -8,6 +8,14 @@ const CATEGORIES = [
   { id: 'holiday', label: 'Holiday / Closure' }
 ];
 
+const TARGET_YEARS = [
+  { value: 'everyone', label: 'Everyone' },
+  { value: '1st', label: '1st Year' },
+  { value: '2nd', label: '2nd Year' },
+  { value: '3rd', label: '3rd Year' },
+  { value: '4th', label: '4th Year' },
+];
+
 function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -15,7 +23,8 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
     body: '',
     document_url: '',
     expires_in_days: '',
-    send_push: false
+    send_push: false,
+    target_year: 'everyone'
   });
 
   const [status, setStatus] = useState('idle');
@@ -175,6 +184,41 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
                       className="w-full bg-paper border-2 border-ink px-3 py-2 text-xs font-bold text-ink placeholder:text-muted/50 focus:outline-none focus:bg-card transition-colors shadow-hard focus:translate-y-[2px] focus:shadow-none"
                       placeholder="E.G. 7"
                     />
+                  </div>
+                </div>
+
+                {/* Target Year */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold text-ink">
+                    Target Year <span className="text-signal">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {TARGET_YEARS.map(opt => {
+                      const isSelected = formData.target_year === opt.value;
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`p-2.5 rounded-xs border-2 border-ink flex items-center justify-between cursor-pointer transition-all ${
+                            isSelected ? 'bg-card' : 'bg-paper opacity-60'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold uppercase text-ink">{opt.label}</span>
+                          <div className={`w-4 h-4 rounded-full border-2 border-ink flex items-center justify-center transition-colors ${
+                            isSelected ? 'bg-signal' : 'bg-paper'
+                          }`}>
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-ink" />}
+                          </div>
+                          <input
+                            type="radio"
+                            name="target_year"
+                            value={opt.value}
+                            checked={isSelected}
+                            onChange={handleChange}
+                            className="sr-only"
+                          />
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 

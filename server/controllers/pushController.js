@@ -1,6 +1,8 @@
 import pool from '../db/pool.js';
 import { sendPushNotification } from '../services/pushService.js';
 
+const VALID_TARGET_YEARS = ['1st', '2nd', '3rd', '4th'];
+
 // GET /api/push/vapid-public-key
 export const getVapidPublicKey = (req, res) => {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -73,7 +75,7 @@ export const getPreferences = async (req, res) => {
 
   try {
     const query = `
-      SELECT sp.subscription_id, sp.muted_club_ids, sp.enabled_tags, sp.updated_at
+      SELECT sp.subscription_id, sp.muted_club_ids, sp.enabled_tags, sp.notification_years, sp.updated_at
       FROM subscription_preferences sp
       JOIN push_subscriptions ps ON sp.subscription_id = ps.id
       WHERE ps.endpoint = $1;
@@ -93,7 +95,7 @@ export const getPreferences = async (req, res) => {
 
 // PATCH /api/push/preferences
 export const updatePreferences = async (req, res) => {
-  const { endpoint, muted_club_ids, enabled_tags } = req.body;
+  const { endpoint, muted_club_ids, enabled_tags, notification_years } = req.body;
   if (!endpoint) {
     return res.status(400).json({ error: 'Endpoint is required' });
   }
@@ -102,14 +104,41 @@ export const updatePreferences = async (req, res) => {
     const mutedArray = Array.isArray(muted_club_ids) ? muted_club_ids : [];
     const tagsArray = Array.isArray(enabled_tags) ? enabled_tags : ['hackathon','tech_event','workshop','cultural_event','college_official'];
 
-    const query = `
-      UPDATE subscription_preferences sp
-      SET muted_club_ids = $1, enabled_tags = $2, updated_at = NOW()
-      FROM push_subscriptions ps
-      WHERE sp.subscription_id = ps.id AND ps.endpoint = $3
-      RETURNING sp.*;
-    `;
-    const { rows } = await pool.query(query, [mutedArray, tagsArray, endpoint]);
+    // Validate notification_years if provided
+    let yearsArray;
+    if (Array.isArray(notification_years)) {
+      yearsArray = notification_years.filter(y => VALID_TARGET_YEARS.includes(y));
+      // If filtering removed all values, default to all years
+      if (yearsArray.length === 0) yearsArray = ['1st', '2nd', '3rd', '4th'];
+    } else {
+      // Not provided — keep existing value (don't overwrite)
+      yearsArray = null;
+    }
+
+    let query;
+    let params;
+
+    if (yearsArray !== null) {
+      query = `
+        UPDATE subscription_preferences sp
+        SET muted_club_ids = $1, enabled_tags = $2, notification_years = $3, updated_at = NOW()
+        FROM push_subscriptions ps
+        WHERE sp.subscription_id = ps.id AND ps.endpoint = $4
+        RETURNING sp.*;
+      `;
+      params = [mutedArray, tagsArray, yearsArray, endpoint];
+    } else {
+      query = `
+        UPDATE subscription_preferences sp
+        SET muted_club_ids = $1, enabled_tags = $2, updated_at = NOW()
+        FROM push_subscriptions ps
+        WHERE sp.subscription_id = ps.id AND ps.endpoint = $3
+        RETURNING sp.*;
+      `;
+      params = [mutedArray, tagsArray, endpoint];
+    }
+
+    const { rows } = await pool.query(query, params);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Subscription not found for the given endpoint' });
