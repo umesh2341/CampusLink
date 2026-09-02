@@ -34,14 +34,14 @@ export const subscribePush = async (req, res) => {
       const prefQuery = `
         INSERT INTO subscription_preferences (user_id)
         VALUES ($1)
-        ON CONFLICT (user_id) DO NOTHING;
+        ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO NOTHING;
       `;
       await pool.query(prefQuery, [userId]);
     } else {
       const prefQuery = `
         INSERT INTO subscription_preferences (subscription_id)
         VALUES ($1)
-        ON CONFLICT (subscription_id) DO NOTHING;
+        ON CONFLICT (subscription_id) WHERE subscription_id IS NOT NULL DO NOTHING;
       `;
       await pool.query(prefQuery, [subscription.id]);
     }

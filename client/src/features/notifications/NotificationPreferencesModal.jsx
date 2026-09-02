@@ -109,7 +109,6 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? enabledTags.filter(t => t !== tagId)
       : [...enabledTags, tagId];
     setEnabledTags(next);
-    savePreferences(next, mutedClubIds, enabledNoticeYears);
   };
 
   const toggleNoticeYear = (yearId) => {
@@ -117,7 +116,6 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? enabledNoticeYears.filter(t => t !== yearId)
       : [...enabledNoticeYears, yearId];
     setEnabledNoticeYears(next);
-    savePreferences(enabledTags, mutedClubIds, next);
   };
 
   const toggleClub = (clubId) => {
@@ -125,11 +123,13 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? mutedClubIds.filter(id => id !== clubId)
       : [...mutedClubIds, clubId];
     setMutedClubIds(nextMuted);
-    savePreferences(enabledTags, nextMuted, enabledNoticeYears);
   };
 
-  const savePreferences = async (tags, mutedClubs, noticeYears) => {
-    if (!subscription) return;
+  const savePreferences = async () => {
+    if (!subscription) {
+      onClose();
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`${API_BASE}/api/push/preferences`, {
@@ -137,15 +137,18 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: subscription.endpoint,
-          enabled_tags: tags,
-          muted_club_ids: mutedClubs,
-          enabled_notice_years: noticeYears,
+          enabled_tags: enabledTags,
+          muted_club_ids: mutedClubIds,
+          enabled_notice_years: enabledNoticeYears,
         }),
       });
 
       if (res.ok) {
         setSaveMessage('SAVED!');
-        setTimeout(() => setSaveMessage(''), 2000);
+        setTimeout(() => {
+          setSaveMessage('');
+          onClose();
+        }, 1000);
       }
     } catch (err) {
       console.error('Failed to save preferences:', err);
@@ -236,7 +239,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
                 ) : saving ? (
                   <span className="text-[10px] text-muted uppercase">SAVING…</span>
                 ) : (
-                  <span className="text-[10px] text-muted uppercase">AUTO-SAVED</span>
+                  <span className="text-[10px] text-muted uppercase">UNSAVED CHANGES</span>
                 )}
               </div>
 
@@ -355,12 +358,19 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="border-t-2 border-ink pt-3 shrink-0">
+        <div className="border-t-2 border-ink pt-3 shrink-0 flex gap-2">
           <button
             onClick={onClose}
-            className="w-full bg-paper text-ink font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xs border-2 border-ink hover:bg-ink hover:text-paper transition-all focus:outline-none"
+            className="flex-1 bg-paper text-ink font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xs border-2 border-ink hover:bg-ink hover:text-paper transition-all focus:outline-none"
           >
-            CLOSE PREFERENCES
+            CANCEL
+          </button>
+          <button
+            onClick={savePreferences}
+            disabled={saving || !subscription}
+            className="flex-1 bg-signal text-ink font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xs border-2 border-ink shadow-hard active:translate-x-[1px] active:translate-y-[1px] active:shadow-none hover:bg-signal/90 transition-all focus:outline-none disabled:opacity-50"
+          >
+            {saving ? 'SAVING...' : 'SAVE PREFERENCES'}
           </button>
         </div>
       </motion.div>
