@@ -13,11 +13,20 @@ const ALL_TAGS = [
   { id: 'college_official', label: 'College Official' },
 ];
 
+const AVAILABLE_NOTICE_TAGS = [
+  { id: '1st_year', label: '1st Year' },
+  { id: '2nd_year', label: '2nd Year' },
+  { id: '3rd_year', label: '3rd Year' },
+  { id: '4th_year', label: '4th Year' },
+  { id: 'general', label: 'General' },
+];
+
 function NotificationPreferencesModal({ isOpen, onClose }) {
   const [subscription, setSubscription] = useState(null);
   const [loadingSub, setLoadingSub] = useState(true);
   const [clubs, setClubs] = useState([]);
   const [enabledTags, setEnabledTags] = useState(['hackathon', 'tech_event', 'workshop', 'cultural_event', 'college_official']);
+  const [enabledNoticeYears, setEnabledNoticeYears] = useState(['1st_year', '2nd_year', '3rd_year', '4th_year', 'general']);
   const [mutedClubIds, setMutedClubIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -73,6 +82,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         const prefData = await prefRes.json();
         if (Array.isArray(prefData.enabled_tags)) setEnabledTags(prefData.enabled_tags);
         if (Array.isArray(prefData.muted_club_ids)) setMutedClubIds(prefData.muted_club_ids);
+        if (Array.isArray(prefData.enabled_notice_years)) setEnabledNoticeYears(prefData.enabled_notice_years);
       }
     } catch (err) {
       console.error('Error loading push preferences:', err);
@@ -99,7 +109,15 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? enabledTags.filter(t => t !== tagId)
       : [...enabledTags, tagId];
     setEnabledTags(next);
-    savePreferences(next, mutedClubIds);
+    savePreferences(next, mutedClubIds, enabledNoticeYears);
+  };
+
+  const toggleNoticeYear = (yearId) => {
+    const next = enabledNoticeYears.includes(yearId)
+      ? enabledNoticeYears.filter(t => t !== yearId)
+      : [...enabledNoticeYears, yearId];
+    setEnabledNoticeYears(next);
+    savePreferences(enabledTags, mutedClubIds, next);
   };
 
   const toggleClub = (clubId) => {
@@ -107,10 +125,10 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
       ? mutedClubIds.filter(id => id !== clubId)
       : [...mutedClubIds, clubId];
     setMutedClubIds(nextMuted);
-    savePreferences(enabledTags, nextMuted);
+    savePreferences(enabledTags, nextMuted, enabledNoticeYears);
   };
 
-  const savePreferences = async (tags, mutedClubs) => {
+  const savePreferences = async (tags, mutedClubs, noticeYears) => {
     if (!subscription) return;
     setSaving(true);
     try {
@@ -121,6 +139,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
           endpoint: subscription.endpoint,
           enabled_tags: tags,
           muted_club_ids: mutedClubs,
+          enabled_notice_years: noticeYears,
         }),
       });
 
@@ -235,6 +254,38 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
                       <div
                         key={tag.id}
                         onClick={() => toggleTag(tag.id)}
+                        className={`p-2.5 rounded-xs border-2 border-ink flex items-center justify-between cursor-pointer transition-all ${
+                          isChecked ? 'bg-card' : 'bg-paper opacity-60'
+                        }`}
+                      >
+                        <span className="text-xs font-bold uppercase text-ink">{tag.label}</span>
+                        <div
+                          className={`w-5 h-5 border-2 border-ink rounded-xs flex items-center justify-center transition-colors ${
+                            isChecked ? 'bg-signal text-ink' : 'bg-paper'
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 1.5: Notice Years */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-muted border-b border-ink/20 pb-1">
+                  <span>[ Notice Years ]</span>
+                  <span>{enabledNoticeYears.length}/{AVAILABLE_NOTICE_TAGS.length} ENABLED</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {AVAILABLE_NOTICE_TAGS.map(tag => {
+                    const isChecked = enabledNoticeYears.includes(tag.id);
+                    return (
+                      <div
+                        key={tag.id}
+                        onClick={() => toggleNoticeYear(tag.id)}
                         className={`p-2.5 rounded-xs border-2 border-ink flex items-center justify-between cursor-pointer transition-all ${
                           isChecked ? 'bg-card' : 'bg-paper opacity-60'
                         }`}

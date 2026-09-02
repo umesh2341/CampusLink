@@ -56,11 +56,16 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
                       hasDoc ? 'cursor-pointer hover:bg-card active:translate-y-[1px] transition-all' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-signal text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0">
                         {notice.category}
                       </span>
-                      <span className="text-[10px] text-muted font-bold uppercase truncate">
+                      {notice.tags && notice.tags.map(tag => (
+                        <span key={tag} className="font-mono text-[9px] font-bold uppercase tracking-wider bg-paper text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0 opacity-70">
+                          {tag.replace('_', ' ')}
+                        </span>
+                      ))}
+                      <span className="text-[10px] text-muted font-bold uppercase truncate ml-auto">
                         {new Date(notice.published_at).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
                     </div>

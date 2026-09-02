@@ -48,9 +48,20 @@ function NoticeBanner({ notices, onOpenNotices, onClose }) {
           <div className="flex items-center justify-between border-b border-ink/20 pb-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <AlertCircle className="w-4 h-4 text-signal shrink-0" />
-              <span className="text-xs font-bold uppercase tracking-wider text-ink truncate">
-                {notice.title}
-              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink truncate">
+                  {notice.title}
+                </span>
+                {notice.tags && notice.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {notice.tags.map(tag => (
+                      <span key={tag} className="font-mono text-[8px] font-bold uppercase tracking-wider bg-paper text-ink border border-ink px-1 py-0.5 rounded-xs shrink-0 opacity-70">
+                        {tag.replace('_', ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">
               {notices.length > 1 && (

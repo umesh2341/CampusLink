@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { Terminal, Send, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Terminal, Send, ArrowLeft, Loader2, AlertCircle, ChevronDown, X } from 'lucide-react';
 import { API_BASE } from '../../shared/lib/api';
 
+const AVAILABLE_NOTICE_TAGS = [
+  { id: '1st_year', label: '1st Year' },
+  { id: '2nd_year', label: '2nd Year' },
+  { id: '3rd_year', label: '3rd Year' },
+  { id: '4th_year', label: '4th Year' },
+  { id: 'general', label: 'General' }
+];
 const CATEGORIES = [
   { id: 'general', label: 'General Announcement' },
   { id: 'exam', label: 'Exam Schedule' },
@@ -15,11 +22,22 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
     body: '',
     document_url: '',
     expires_in_days: '',
-    send_push: false
+    send_push: false,
+    tags: []
   });
 
   const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isTagsOpen, setIsTagsOpen] = useState(false);
+
+  const toggleTag = (tagId) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tagId) 
+        ? prev.tags.filter(t => t !== tagId) 
+        : [...prev.tags, tagId]
+    }));
+  };
 
   if (!isAuthority) {
     return (
@@ -48,8 +66,8 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.body) {
-      setErrorMsg('TITLE AND BODY ARE REQUIRED');
+    if (!formData.title || !formData.body || formData.tags.length === 0) {
+      setErrorMsg('TITLE, BODY, AND AT LEAST ONE TAG ARE REQUIRED');
       return;
     }
     
@@ -176,6 +194,66 @@ function AddNoticeForm({ onBack, onSuccess, isAuthority, userId }) {
                       placeholder="E.G. 7"
                     />
                   </div>
+                </div>
+
+                <div className="relative space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold text-ink flex justify-between">
+                    <span>Notice Tags (Multi-Select) <span className="text-signal">*</span></span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsTagsOpen(prev => !prev)}
+                    className="w-full bg-paper border-2 border-ink px-3 py-2 text-xs font-bold uppercase text-left flex items-center justify-between focus:outline-none shadow-hard focus:translate-y-[2px] focus:shadow-none transition-colors hover:bg-card"
+                  >
+                    <span className={formData.tags.length > 0 ? 'text-ink' : 'text-muted'}>
+                      {formData.tags.length === 0
+                        ? 'SELECT TAGS…'
+                        : `${formData.tags.length} TAG${formData.tags.length > 1 ? 'S' : ''} SELECTED`}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-ink transition-transform ${isTagsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {formData.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {formData.tags.map(tagId => {
+                        const tagObj = AVAILABLE_NOTICE_TAGS.find(t => t.id === tagId);
+                        return (
+                          <span key={tagId} className="inline-flex items-center gap-1 font-mono text-[9px] font-bold uppercase bg-paper text-ink border-2 border-ink px-2 py-0.5 rounded-xs">
+                            <span>{tagObj?.label.toUpperCase() || tagId}</span>
+                            <button type="button" onClick={() => toggleTag(tagId)} className="hover:text-signal">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {isTagsOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-card border-2 border-ink shadow-hard-lg rounded-xs p-2.5 z-30 space-y-1">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted border-b border-ink/20 pb-1 mb-1.5">
+                        — SELECT ALL THAT APPLY
+                      </div>
+                      {AVAILABLE_NOTICE_TAGS.map(tag => {
+                        const isChecked = formData.tags.includes(tag.id);
+                        return (
+                          <div
+                            key={tag.id}
+                            onClick={() => toggleTag(tag.id)}
+                            className="flex items-center justify-between p-2 rounded-xs border border-transparent hover:border-ink/20 hover:bg-paper cursor-pointer text-xs"
+                          >
+                            <span className="font-bold uppercase text-ink">{tag.label}</span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              readOnly
+                              className="w-4 h-4 accent-signal cursor-pointer"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

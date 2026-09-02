@@ -6,7 +6,7 @@ import { dispatchNoticePushNotification } from '../services/pushService.js';
 export const getNotices = async (req, res) => {
   try {
     const query = `
-      SELECT id, title, category, body, published_at, expires_at, document_url, created_at
+      SELECT id, title, category, body, published_at, expires_at, document_url, created_at, tags
       FROM notices
       WHERE published_at <= NOW()
         AND (expires_at IS NULL OR expires_at > NOW())
@@ -23,7 +23,7 @@ export const getNotices = async (req, res) => {
 // POST /api/notices
 export const createNotice = async (req, res) => {
   try {
-    const { title, category, body, document_url, expires_in_days, send_push } = req.body;
+    const { title, category, body, document_url, expires_in_days, send_push, tags } = req.body;
     if (!title || !category || !body) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -32,20 +32,23 @@ export const createNotice = async (req, res) => {
     let query;
     let params;
     
+    // Ensure tags is an array
+    const noticeTags = Array.isArray(tags) ? tags : [];
+    
     if (expires_in_days) {
       query = `
-        INSERT INTO notices (title, category, body, document_url, expires_at)
-        VALUES ($1, $2, $3, $4, NOW() + ($5 || ' days')::INTERVAL)
+        INSERT INTO notices (title, category, body, document_url, expires_at, tags)
+        VALUES ($1, $2, $3, $4, NOW() + ($5 || ' days')::INTERVAL, $6)
         RETURNING *;
       `;
-      params = [title, category, body, document_url || null, parseInt(expires_in_days, 10)];
+      params = [title, category, body, document_url || null, parseInt(expires_in_days, 10), noticeTags];
     } else {
       query = `
-        INSERT INTO notices (title, category, body, document_url)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO notices (title, category, body, document_url, tags)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *;
       `;
-      params = [title, category, body, document_url || null];
+      params = [title, category, body, document_url || null, noticeTags];
     }
     
     const { rows } = await pool.query(query, params);

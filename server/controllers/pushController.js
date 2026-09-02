@@ -73,7 +73,7 @@ export const getPreferences = async (req, res) => {
 
   try {
     const query = `
-      SELECT sp.subscription_id, sp.muted_club_ids, sp.enabled_tags, sp.updated_at
+      SELECT sp.subscription_id, sp.muted_club_ids, sp.enabled_tags, sp.enabled_notice_years, sp.updated_at
       FROM subscription_preferences sp
       JOIN push_subscriptions ps ON sp.subscription_id = ps.id
       WHERE ps.endpoint = $1;
@@ -93,7 +93,7 @@ export const getPreferences = async (req, res) => {
 
 // PATCH /api/push/preferences
 export const updatePreferences = async (req, res) => {
-  const { endpoint, muted_club_ids, enabled_tags } = req.body;
+  const { endpoint, muted_club_ids, enabled_tags, enabled_notice_years } = req.body;
   if (!endpoint) {
     return res.status(400).json({ error: 'Endpoint is required' });
   }
@@ -101,15 +101,16 @@ export const updatePreferences = async (req, res) => {
   try {
     const mutedArray = Array.isArray(muted_club_ids) ? muted_club_ids : [];
     const tagsArray = Array.isArray(enabled_tags) ? enabled_tags : ['hackathon','tech_event','workshop','cultural_event','college_official'];
+    const noticeYearsArray = Array.isArray(enabled_notice_years) ? enabled_notice_years : ['1st_year', '2nd_year', '3rd_year', '4th_year', 'general'];
 
     const query = `
       UPDATE subscription_preferences sp
-      SET muted_club_ids = $1, enabled_tags = $2, updated_at = NOW()
+      SET muted_club_ids = $1, enabled_tags = $2, enabled_notice_years = $3, updated_at = NOW()
       FROM push_subscriptions ps
-      WHERE sp.subscription_id = ps.id AND ps.endpoint = $3
+      WHERE sp.subscription_id = ps.id AND ps.endpoint = $4
       RETURNING sp.*;
     `;
-    const { rows } = await pool.query(query, [mutedArray, tagsArray, endpoint]);
+    const { rows } = await pool.query(query, [mutedArray, tagsArray, noticeYearsArray, endpoint]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Subscription not found for the given endpoint' });

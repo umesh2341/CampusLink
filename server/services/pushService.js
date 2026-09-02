@@ -132,14 +132,30 @@ export const dispatchNoticePushNotification = async (notice) => {
   }
 
   try {
-    // For notices, we don't filter by muted_club_ids (they are campus-wide)
-    // and we don't filter by enabled_tags (because Notice categories like 'exam', 'holiday' 
-    // are not part of the standard event tags like 'hackathon', 'cultural_event').
-    // Therefore, we send to all active push subscriptions.
-    const subsQuery = `SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions;`;
+    // For notices, we filter by enabled_notice_years
+    // We don't filter by muted_club_ids.
+    const subsQuery = `
+      SELECT ps.endpoint, ps.p256dh_key, ps.auth_key, sp.enabled_notice_years 
+      FROM push_subscriptions ps
+      LEFT JOIN subscription_preferences sp ON ps.id = sp.subscription_id;
+    `;
     const { rows: subscriptions } = await pool.query(subsQuery);
 
     if (subscriptions.length === 0) return;
+
+    const noticeTags = Array.isArray(notice.tags) ? notice.tags : [];
+
+    const matchingSubs = subscriptions.filter((sub) => {
+      // If user enabled any of the notice's tags, send it
+      if (Array.isArray(sub.enabled_notice_years) && sub.enabled_notice_years.length > 0) {
+        if (noticeTags.length === 0) return true; // Notice has no tags, allow by default
+        const hasMatchingTag = noticeTags.some(tag => sub.enabled_notice_years.includes(tag));
+        if (!hasMatchingTag) return false;
+      }
+      return true;
+    });
+
+    if (matchingSubs.length === 0) return;
 
     // Construct payload
     // We add type: 'notice' to differentiate it for the service worker click handler
@@ -153,7 +169,7 @@ export const dispatchNoticePushNotification = async (notice) => {
       }
     });
 
-    const pushPromises = subscriptions.map(async (sub) => {
+    const pushPromises = matchingSubs.map(async (sub) => {
       // Reuse the existing single send method for each sub
       await sendPushNotification(sub, JSON.parse(payload));
     });
