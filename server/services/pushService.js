@@ -52,12 +52,14 @@ export const dispatchEventPushNotification = async (event) => {
       if (clubRows.length > 0) clubLogo = clubRows[0].logo_url;
     }
 
-    // 2. Query subscriptions joined with preferences
+    // 1) Fetch all subscriptions + their preferences
     const subsQuery = `
-      SELECT ps.id AS sub_id, ps.endpoint, ps.p256dh_key, ps.auth_key, 
-             sp.muted_club_ids, sp.enabled_tags
+      SELECT ps.endpoint, ps.p256dh_key, ps.auth_key, sp.muted_club_ids, sp.enabled_tags
       FROM push_subscriptions ps
-      LEFT JOIN subscription_preferences sp ON ps.id = sp.subscription_id;
+      LEFT JOIN subscription_preferences sp ON (
+        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+      );
     `;
     const { rows: subscriptions } = await pool.query(subsQuery);
 
@@ -137,7 +139,10 @@ export const dispatchNoticePushNotification = async (notice) => {
     const subsQuery = `
       SELECT ps.endpoint, ps.p256dh_key, ps.auth_key, sp.enabled_notice_years 
       FROM push_subscriptions ps
-      LEFT JOIN subscription_preferences sp ON ps.id = sp.subscription_id;
+      LEFT JOIN subscription_preferences sp ON (
+        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+      );
     `;
     const { rows: subscriptions } = await pool.query(subsQuery);
 

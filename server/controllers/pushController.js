@@ -29,13 +29,22 @@ export const subscribePush = async (req, res) => {
     const { rows } = await pool.query(subQuery, [endpoint, keys.p256dh, keys.auth, userId || null]);
     const subscription = rows[0];
 
-    // Upsert default preferences row
-    const prefQuery = `
-      INSERT INTO subscription_preferences (subscription_id)
-      VALUES ($1)
-      ON CONFLICT (subscription_id) DO NOTHING;
-    `;
-    await pool.query(prefQuery, [subscription.id]);
+    // Upsert default preferences row using user_id if logged in, else subscription_id
+    if (userId) {
+      const prefQuery = `
+        INSERT INTO subscription_preferences (user_id)
+        VALUES ($1)
+        ON CONFLICT (user_id) DO NOTHING;
+      `;
+      await pool.query(prefQuery, [userId]);
+    } else {
+      const prefQuery = `
+        INSERT INTO subscription_preferences (subscription_id)
+        VALUES ($1)
+        ON CONFLICT (subscription_id) DO NOTHING;
+      `;
+      await pool.query(prefQuery, [subscription.id]);
+    }
 
     res.status(201).json({
       status: 'subscribed',
@@ -73,9 +82,12 @@ export const getPreferences = async (req, res) => {
 
   try {
     const query = `
-      SELECT sp.subscription_id, sp.muted_club_ids, sp.enabled_tags, sp.enabled_notice_years, sp.updated_at
-      FROM subscription_preferences sp
-      JOIN push_subscriptions ps ON sp.subscription_id = ps.id
+      SELECT sp.muted_club_ids, sp.enabled_tags, sp.enabled_notice_years, sp.updated_at
+      FROM push_subscriptions ps
+      JOIN subscription_preferences sp ON (
+        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+      )
       WHERE ps.endpoint = $1;
     `;
     const { rows } = await pool.query(query, [endpoint]);
@@ -107,7 +119,10 @@ export const updatePreferences = async (req, res) => {
       UPDATE subscription_preferences sp
       SET muted_club_ids = $1, enabled_tags = $2, enabled_notice_years = $3, updated_at = NOW()
       FROM push_subscriptions ps
-      WHERE sp.subscription_id = ps.id AND ps.endpoint = $4
+      WHERE (
+        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+      ) AND ps.endpoint = $4
       RETURNING sp.*;
     `;
     const { rows } = await pool.query(query, [mutedArray, tagsArray, noticeYearsArray, endpoint]);
