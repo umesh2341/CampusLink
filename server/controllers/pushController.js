@@ -69,27 +69,39 @@ export const unsubscribePush = async (req, res) => {
   }
 };
 
-// GET /api/push/preferences?endpoint=...
+// GET /api/push/preferences?endpoint=... OR ?user_id=...
 export const getPreferences = async (req, res) => {
-  const { endpoint } = req.query;
-  if (!endpoint) {
-    return res.status(400).json({ error: 'Endpoint is required' });
+  const { endpoint, user_id } = req.query;
+  if (!endpoint && !user_id) {
+    return res.status(400).json({ error: 'endpoint or user_id is required' });
   }
 
   try {
-    const query = `
-      SELECT sp.muted_club_ids, sp.enabled_tags, sp.enabled_notice_years, sp.updated_at
-      FROM push_subscriptions ps
-      JOIN subscription_preferences sp ON (
-        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
-        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
-      )
-      WHERE ps.endpoint = $1;
-    `;
-    const { rows } = await pool.query(query, [endpoint]);
+    let rows;
+    if (user_id) {
+      // Direct user_id lookup - most reliable path for logged-in users
+      const result = await pool.query(
+        `SELECT muted_club_ids, enabled_tags, enabled_notice_years, updated_at
+         FROM subscription_preferences WHERE user_id = $1`,
+        [user_id]
+      );
+      rows = result.rows;
+    } else {
+      const result = await pool.query(
+        `SELECT sp.muted_club_ids, sp.enabled_tags, sp.enabled_notice_years, sp.updated_at
+         FROM push_subscriptions ps
+         JOIN subscription_preferences sp ON (
+           (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+           (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+         )
+         WHERE ps.endpoint = $1`,
+        [endpoint]
+      );
+      rows = result.rows;
+    }
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Subscription not found' });
+      return res.status(404).json({ error: 'Preferences not found' });
     }
 
     res.json(rows[0]);
@@ -101,9 +113,9 @@ export const getPreferences = async (req, res) => {
 
 // PATCH /api/push/preferences
 export const updatePreferences = async (req, res) => {
-  const { endpoint, muted_club_ids, enabled_tags, enabled_notice_years } = req.body;
-  if (!endpoint) {
-    return res.status(400).json({ error: 'Endpoint is required' });
+  const { endpoint, user_id, muted_club_ids, enabled_tags, enabled_notice_years } = req.body;
+  if (!endpoint && !user_id) {
+    return res.status(400).json({ error: 'endpoint or user_id is required' });
   }
 
   try {
@@ -111,26 +123,51 @@ export const updatePreferences = async (req, res) => {
     const tagsArray = Array.isArray(enabled_tags) ? enabled_tags : ['hackathon','tech_event','workshop','cultural_event','college_official'];
     const noticeYearsArray = Array.isArray(enabled_notice_years) ? enabled_notice_years : ['1st_year', '2nd_year', '3rd_year', '4th_year', 'general'];
 
-    const query = `
-      UPDATE subscription_preferences sp
-      SET muted_club_ids = $1, enabled_tags = $2, enabled_notice_years = $3, updated_at = NOW()
-      FROM push_subscriptions ps
-      WHERE (
-        (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
-        (ps.user_id IS NULL AND sp.subscription_id = ps.id)
-      ) AND ps.endpoint = $4
-      RETURNING sp.*;
-    `;
-    const { rows } = await pool.query(query, [mutedArray, tagsArray, noticeYearsArray, endpoint]);
+    let rows;
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Subscription not found for the given endpoint' });
+    if (user_id) {
+      // Upsert directly by user_id - most reliable path for logged-in users
+      const result = await pool.query(
+        `INSERT INTO subscription_preferences (user_id, muted_club_ids, enabled_tags, enabled_notice_years, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT DO NOTHING
+         RETURNING *`,
+        [user_id, mutedArray, tagsArray, noticeYearsArray]
+      );
+      if (result.rowCount === 0) {
+        // Row already exists, UPDATE it
+        const updateResult = await pool.query(
+          `UPDATE subscription_preferences
+           SET muted_club_ids = $2, enabled_tags = $3, enabled_notice_years = $4, updated_at = NOW()
+           WHERE user_id = $1
+           RETURNING *`,
+          [user_id, mutedArray, tagsArray, noticeYearsArray]
+        );
+        rows = updateResult.rows;
+      } else {
+        rows = result.rows;
+      }
+    } else {
+      // Fallback: update by endpoint (anonymous users)
+      const result = await pool.query(
+        `UPDATE subscription_preferences sp
+         SET muted_club_ids = $1, enabled_tags = $2, enabled_notice_years = $3, updated_at = NOW()
+         FROM push_subscriptions ps
+         WHERE (
+           (ps.user_id IS NOT NULL AND sp.user_id = ps.user_id) OR
+           (ps.user_id IS NULL AND sp.subscription_id = ps.id)
+         ) AND ps.endpoint = $4
+         RETURNING sp.*`,
+        [mutedArray, tagsArray, noticeYearsArray, endpoint]
+      );
+      rows = result.rows;
     }
 
-    res.json({
-      status: 'updated',
-      preferences: rows[0],
-    });
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Preferences not found for the given user/endpoint' });
+    }
+
+    res.json({ status: 'updated', preferences: rows[0] });
   } catch (error) {
     console.error('Error updating push preferences:', error);
     res.status(500).json({ error: 'Failed to update preferences' });

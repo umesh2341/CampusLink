@@ -79,14 +79,17 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         try {
           await subscribeUserToPush(user.id);
         } catch (e) {
-          console.error("Failed to bind subscription to user:", e);
+          // Ignore - subscription may already exist, we pass userId directly below
         }
       }
 
       setSubscription(sub);
 
-      // Fetch saved preferences from backend
-      const prefRes = await fetch(`${API_BASE}/api/push/preferences?endpoint=${encodeURIComponent(sub.endpoint)}`);
+      // Fetch saved preferences from backend - prefer user_id over endpoint if logged in
+      const prefUrl = user?.id
+        ? `${API_BASE}/api/push/preferences?user_id=${encodeURIComponent(user.id)}`
+        : `${API_BASE}/api/push/preferences?endpoint=${encodeURIComponent(sub.endpoint)}`;
+      const prefRes = await fetch(prefUrl);
       if (prefRes.ok) {
         const prefData = await prefRes.json();
         if (Array.isArray(prefData.enabled_tags)) setEnabledTags(prefData.enabled_tags);
@@ -146,6 +149,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: subscription.endpoint,
+          user_id: user?.id || null,
           enabled_tags: enabledTags,
           muted_club_ids: mutedClubIds,
           enabled_notice_years: enabledNoticeYears,
