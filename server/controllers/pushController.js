@@ -31,19 +31,15 @@ export const subscribePush = async (req, res) => {
 
     // Upsert default preferences row using user_id if logged in, else subscription_id
     if (userId) {
-      const prefQuery = `
-        INSERT INTO subscription_preferences (user_id)
-        VALUES ($1)
-        ON CONFLICT (user_id) WHERE user_id IS NOT NULL DO NOTHING;
-      `;
-      await pool.query(prefQuery, [userId]);
+      const checkRes = await pool.query(`SELECT 1 FROM subscription_preferences WHERE user_id = $1`, [userId]);
+      if (checkRes.rowCount === 0) {
+        await pool.query(`INSERT INTO subscription_preferences (user_id) VALUES ($1)`, [userId]);
+      }
     } else {
-      const prefQuery = `
-        INSERT INTO subscription_preferences (subscription_id)
-        VALUES ($1)
-        ON CONFLICT (subscription_id) WHERE subscription_id IS NOT NULL DO NOTHING;
-      `;
-      await pool.query(prefQuery, [subscription.id]);
+      const checkRes = await pool.query(`SELECT 1 FROM subscription_preferences WHERE subscription_id = $1`, [subscription.id]);
+      if (checkRes.rowCount === 0) {
+        await pool.query(`INSERT INTO subscription_preferences (subscription_id) VALUES ($1)`, [subscription.id]);
+      }
     }
 
     res.status(201).json({
