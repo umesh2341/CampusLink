@@ -1,8 +1,66 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, Search } from 'lucide-react';
+
+// Alias map: maps natural language phrasings → canonical tag id
+const TAG_ALIASES = {
+  '1st_year':  ['1st year', 'first year', 'freshman', '1st'],
+  '2nd_year':  ['2nd year', 'second year', 'sophomore', '2nd'],
+  '3rd_year':  ['3rd year', 'third year', 'junior', '3rd'],
+  '4th_year':  ['4th year', 'fourth year', 'senior', '4th', 'final year', 'final'],
+  'general':   ['general', 'all', 'everyone'],
+};
+
+// Returns true if the search query matches any alias for any tag in the notice's tags array
+function matchesByTagAlias(noticeTags, query) {
+  if (!noticeTags || noticeTags.length === 0) return false;
+  const q = query.toLowerCase().trim();
+  for (const [tagId, aliases] of Object.entries(TAG_ALIASES)) {
+    if (noticeTags.includes(tagId)) {
+      if (aliases.some(alias => alias.includes(q) || q.includes(alias))) return true;
+      if (tagId.replace('_', ' ').includes(q)) return true;
+    }
+  }
+  return false;
+}
 
 function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
+  const [rawQuery, setRawQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debounceRef = useRef(null);
+
+  // Debounce: update searchQuery 300ms after user stops typing
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(rawQuery);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [rawQuery]);
+
+  // Reset search when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setRawQuery('');
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Client-side filtering — all notices are already loaded
+  const filteredNotices = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return notices;
+    return notices.filter(notice => {
+      const inTitle    = notice.title?.toLowerCase().includes(q);
+      const inBody     = notice.body?.toLowerCase().includes(q);
+      const inCategory = notice.category?.toLowerCase().includes(q);
+      const inTagAlias = matchesByTagAlias(notice.tags, q);
+      // Also allow direct tag id match (e.g. typing "2nd_year")
+      const inTagDirect = notice.tags?.some(tag => tag.toLowerCase().includes(q));
+      return inTitle || inBody || inCategory || inTagAlias || inTagDirect;
+    });
+  }, [notices, searchQuery]);
+
   if (!isOpen) return null;
 
   return (
@@ -39,14 +97,41 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
             </button>
           </div>
 
+          {/* Search Toolbar */}
+          <div className="p-3 bg-paper border-b-2 border-ink shrink-0">
+            <div className="bg-card border-2 border-ink shadow-hard flex items-center px-2.5 py-1.5 rounded-xs focus-within:bg-paper transition-colors">
+              <Search className="w-3.5 h-3.5 text-muted mr-2 shrink-0" />
+              <input
+                type="text"
+                value={rawQuery}
+                onChange={(e) => setRawQuery(e.target.value)}
+                placeholder="SEARCH NOTICES, TAGS, CATEGORY..."
+                className="w-full text-xs bg-transparent border-none outline-none text-ink placeholder:text-muted uppercase"
+              />
+              {rawQuery && (
+                <button
+                  onClick={() => setRawQuery('')}
+                  className="p-0.5 text-muted hover:text-ink"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-grain">
-            {notices.length === 0 ? (
-              <p className="text-xs text-muted text-center py-8 font-bold uppercase">
-                — NO ACTIVE NOTICES —
-              </p>
+            {filteredNotices.length === 0 ? (
+              <div className="p-8 text-center bg-card border-2 border-ink rounded-xs space-y-1">
+                <p className="font-display text-xl uppercase text-ink">— NO NOTICES FOUND —</p>
+                <p className="text-xs text-muted">
+                  {searchQuery
+                    ? `No notices match "${searchQuery}"`
+                    : '— NO ACTIVE NOTICES —'}
+                </p>
+              </div>
             ) : (
-              notices.map((notice) => {
+              filteredNotices.map((notice) => {
                 const hasDoc = !!notice.document_url;
                 return (
                   <div
@@ -89,7 +174,9 @@ function NoticeBoardModal({ isOpen, onClose, notices = [] }) {
           {/* Footer CTA */}
           <div className="bg-paper border-t-2 border-ink p-3 shrink-0 flex items-center justify-between">
             <span className="text-[10px] text-muted uppercase font-bold tracking-wider">
-              OFFICIAL ANNOUNCEMENTS
+              {searchQuery
+                ? `${filteredNotices.length} / ${notices.length} NOTICES`
+                : 'OFFICIAL ANNOUNCEMENTS'}
             </span>
             <button
               onClick={onClose}
