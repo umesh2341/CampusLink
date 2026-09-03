@@ -74,6 +74,15 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
         return;
       }
 
+      // If user is logged in, proactively sync this subscription with their user_id
+      if (user?.id) {
+        try {
+          await subscribeUserToPush(user.id);
+        } catch (e) {
+          console.error("Failed to bind subscription to user:", e);
+        }
+      }
+
       setSubscription(sub);
 
       // Fetch saved preferences from backend
