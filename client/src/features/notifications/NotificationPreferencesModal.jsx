@@ -37,7 +37,7 @@ function NotificationPreferencesModal({ isOpen, onClose }) {
     if (!isOpen) return;
 
     checkSubscriptionAndLoad();
-  }, [isOpen]);
+  }, [isOpen, user?.id]);
 
   const checkSubscriptionAndLoad = async () => {
     setLoadingSub(true);
