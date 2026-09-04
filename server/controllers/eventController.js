@@ -31,7 +31,7 @@ export const getEventById = async (req, res) => {
         b.${bldCat} AS building_category
       FROM events e
       JOIN buildings b ON e.building_id = b.id
-      WHERE e.id = $1;
+      WHERE e.id = $1 AND NOT e.is_hidden;
     `;
     const { rows } = await pool.query(query, [id]);
     if (rows.length === 0) {
@@ -91,9 +91,9 @@ export const createEvent = async (req, res) => {
     const query = `
       INSERT INTO events (
         title, description, start_time, end_time, building_id, 
-        club_id, ${evtClub}, image_url, ${evtReg}, floor, room_number, tags
+        club_id, ${evtClub}, image_url, ${evtReg}, floor, room_number, tags, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *, ${evtClub} AS organizing_club, ${evtReg} AS registration_url;
     `;
     const { rows } = await pool.query(query, [
@@ -109,6 +109,7 @@ export const createEvent = async (req, res) => {
       floor || null,
       room_number || null,
       eventTags,
+      req.user.id,
     ]);
     
     const newEvent = rows[0];
@@ -119,6 +120,55 @@ export const createEvent = async (req, res) => {
     res.status(201).json(newEvent);
   } catch (error) {
     console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/events/manage
+// Return active visible events owned by the organizer, or all active visible events for admins.
+export const getManageableEvents = async (req, res) => {
+  try {
+    const schema = await detectSchema();
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+    const isAdmin = req.user.role === 'admin';
+    const query = `
+      SELECT e.*, e.${evtClub} AS organizing_club, e.${evtReg} AS registration_url,
+             b.name AS building_name
+      FROM events e
+      JOIN buildings b ON e.building_id = b.id
+      WHERE e.end_time >= NOW()
+        AND NOT e.is_hidden
+        AND (e.created_by = $1 OR $2 = TRUE)
+      ORDER BY e.start_time ASC;
+    `;
+    const { rows } = await pool.query(query, [req.user.id, isAdmin]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching manageable events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PATCH /api/events/:id/hide
+// Only the event creator or an admin may hide an event.
+export const hideEvent = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE events
+       SET is_hidden = TRUE, hidden_at = NOW(), hidden_by = $2
+       WHERE id = $1 AND is_hidden = FALSE
+         AND (created_by = $2 OR $3 = TRUE)
+       RETURNING id, is_hidden, hidden_at, hidden_by`,
+      [id, req.user.id, req.user.role === 'admin']
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found or you cannot hide it' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(`Error hiding event ${id}:`, error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

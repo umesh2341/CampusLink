@@ -53,8 +53,8 @@ export const getBuildings = async (req, res) => {
     const query = `
       SELECT b.id, b.svg_element_id, b.name, b.short_name, b.hide_label, b.${bldCat} AS category, b.${bldCat} AS type,
              b.slug, b.entrance_x, b.entrance_y, b.description, b.contact_info, b.created_at,
-             COALESCE(COUNT(e.id) FILTER (WHERE e.end_time >= NOW()), 0)::INTEGER AS active_event_count,
-             MAX(e.created_at) FILTER (WHERE e.end_time >= NOW()) AS latest_event_created_at
+             COALESCE(COUNT(e.id) FILTER (WHERE e.end_time >= NOW() AND NOT e.is_hidden), 0)::INTEGER AS active_event_count,
+             MAX(e.created_at) FILTER (WHERE e.end_time >= NOW() AND NOT e.is_hidden) AS latest_event_created_at
       FROM buildings b
       LEFT JOIN events e ON b.id = e.building_id
       GROUP BY b.id
@@ -85,7 +85,7 @@ export const getBuildingEvents = async (req, res) => {
              image_url, ${evtReg} AS registration_url, floor, room_number, 
              tags, club_id, ${evtClub} AS organizing_club
       FROM events
-      WHERE building_id = $1 AND end_time >= NOW()
+      WHERE building_id = $1 AND end_time >= NOW() AND NOT is_hidden
       ORDER BY start_time ASC;
     `;
     const { rows } = await pool.query(query, [id]);

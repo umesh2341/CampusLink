@@ -127,6 +127,10 @@ async function run() {
       ALTER TABLE events ADD COLUMN IF NOT EXISTS organizing_club VARCHAR(255);
       ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_url VARCHAR(1000);
       ALTER TABLE events ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES profiles(id) ON DELETE SET NULL;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE NOT NULL;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS hidden_by UUID REFERENCES profiles(id) ON DELETE SET NULL;
     `);
     // Create departments table
     await dbClient.query(`

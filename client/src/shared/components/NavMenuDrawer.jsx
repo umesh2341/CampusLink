@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, MessageCircle, MessageSquare, Info, ChevronRight, ExternalLink } from 'lucide-react';
+import { Bell, MessageCircle, MessageSquare, Info, ChevronRight, ExternalLink, Calendar } from 'lucide-react';
 
 function NavMenuDrawer({
   isOpen,
@@ -13,6 +13,7 @@ function NavMenuDrawer({
   isAuthority,
   isAdmin,
   onOpenAdminRequests,
+  onOpenManageEvents,
 }) {
   const menuItems = [
     {
@@ -71,6 +72,20 @@ function NavMenuDrawer({
         if (onOpenAdminRequests) onOpenAdminRequests();
       },
       badge: 'ADMIN',
+    });
+  }
+
+  if (isOrganizer) {
+    menuItems.unshift({
+      id: 'manage_events',
+      label: isAdmin ? 'Manage Events' : 'My Events',
+      description: isAdmin ? 'Hide active campus events' : 'Manage events you created',
+      icon: Calendar,
+      onClick: () => {
+        onClose();
+        if (onOpenManageEvents) onOpenManageEvents();
+      },
+      badge: isAdmin ? 'ADMIN' : 'ORGANIZER',
     });
   }
 

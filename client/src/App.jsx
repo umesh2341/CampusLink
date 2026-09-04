@@ -29,6 +29,7 @@ import { supabase } from './shared/lib/supabaseClient';
 import ClubsDirectoryModal from './features/clubs/ClubsDirectoryModal';
 import ClubCardModal from './features/clubs/ClubCardModal';
 import AllEventsModal from './features/events/AllEventsModal';
+import EventManagementModal from './features/events/EventManagementModal';
 import FeedbackModal from './shared/components/FeedbackModal';
 import LocationConsentModal from './features/map/LocationConsentModal';
 import NoticeBanner from './features/notices/NoticeBanner';
@@ -76,6 +77,7 @@ function AppContent() {
   const [selectedClub,        setSelectedClub]        = useState(null);
   const [isClubDetailOpen,    setIsClubDetailOpen]    = useState(false); // Can stack on top of directories
   const [isAdminRequestsModalOpen, setIsAdminRequestsModalOpen] = useState(false);
+  const [isEventManagementModalOpen, setIsEventManagementModalOpen] = useState(false);
   
   // Real auth logic replaces local states
   const isOrganizer = profile?.role === 'organizer' || profile?.role === 'admin';
@@ -679,6 +681,7 @@ function AppContent() {
           onOpenAbout={() => switchOverlay('ABOUT')}
           onOpenAddNotice={() => setCurrentView('addNotice')}
           onOpenAdminRequests={() => setIsAdminRequestsModalOpen(true)}
+          onOpenManageEvents={() => setIsEventManagementModalOpen(true)}
           isOrganizer={isOrganizer}
           isAuthority={isAuthority}
           isAdmin={profile?.role === 'admin'}
@@ -709,6 +712,18 @@ function AppContent() {
           allActiveEvents={allActiveEvents}
           isEventsLoading={isEventsLoading}
           onSelectEvent={handleSelectEvent}
+        />
+
+        <EventManagementModal
+          isOpen={isEventManagementModalOpen}
+          onClose={() => setIsEventManagementModalOpen(false)}
+          userId={user?.id}
+          isAdmin={profile?.role === 'admin'}
+          onHidden={() => {
+            queryClient.invalidateQueries({ queryKey: ['buildingEvents'] });
+            queryClient.invalidateQueries({ queryKey: ['buildings'] });
+            setAllActiveEvents((events) => events.filter((event) => event.is_hidden !== true));
+          }}
         />
 
         {/* ── Profile Modal ── */}

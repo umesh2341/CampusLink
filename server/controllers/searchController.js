@@ -119,6 +119,7 @@ export const search = async (req, res) => {
       FROM events e
       JOIN buildings b ON e.building_id = b.id
       WHERE e.end_time >= NOW()
+        AND NOT e.is_hidden
         AND (e.title ILIKE $1 OR e.description ILIKE $1 OR e.${evtClub} ILIKE $1)
       ORDER BY e.start_time ASC
       LIMIT 10;
