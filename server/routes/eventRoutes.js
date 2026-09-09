@@ -1,9 +1,10 @@
 import express from 'express';
-import { getEventById, createEvent, getManageableEvents, hideEvent } from '../controllers/eventController.js';
+import { getAllEvents, getEventById, createEvent, getManageableEvents, hideEvent } from '../controllers/eventController.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.get('/', getAllEvents);
 router.post('/', requireAuth, requireRole(['organizer', 'admin']), createEvent);
 router.get('/manage', requireAuth, requireRole(['organizer', 'admin']), getManageableEvents);
 router.get('/:id', getEventById);
