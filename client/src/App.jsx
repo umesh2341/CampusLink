@@ -7,6 +7,7 @@ import EventDetailModal from './features/events/EventDetailModal';
 import SearchBar from './features/search/SearchBar';
 import {
   fetchBuildings,
+  fetchEvents,
   fetchBuildingEvents,
   fetchClubs,
   fetchNotices,
@@ -14,6 +15,7 @@ import {
   stopUserLocationSharing,
   API_BASE,
 } from './shared/lib/api';
+import TerminalBootScreen from './features/bootstrap/TerminalBootScreen';
 import {
   convertGpsToCampusCoordinates,
   calculateDistanceMeters,
@@ -138,24 +140,106 @@ function AppContent() {
     startNavigation(building, userLocation, mode);
   };
 
-  // ── React Query — data fetching ─────────────────────────────
+  // ── Kiosk Boot Initialization Layer ────────────────────────
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [bootLogs, setBootLogs] = useState([
+    { id: 'map', label: '> MOUNTING SVG CAMPUS MAP ..........', status: 'PENDING' },
+    { id: 'events', label: '> SYNCING ACTIVE EVENTS ...........', status: 'PENDING' },
+    { id: 'clubs', label: '> FETCHING CLUBS DIRECTORY ........', status: 'PENDING' },
+    { id: 'notices', label: '> LOADING CAMPUS NOTICES ..........', status: 'PENDING' },
+  ]);
+  const [statusText, setStatusText] = useState('BOOTING SYSTEM...');
+
+  useEffect(() => {
+    let isMounted = true;
+    const runBootSequence = async () => {
+      const tasks = [
+        { id: 'map', queryKey: ['buildings'], queryFn: fetchBuildings },
+        { id: 'events', queryKey: ['events'], queryFn: fetchEvents },
+        { id: 'clubs', queryKey: ['clubs'], queryFn: fetchClubs },
+        { id: 'notices', queryKey: ['notices'], queryFn: fetchNotices },
+      ];
+
+      const startTime = Date.now();
+
+      // Launch all prefetch requests in parallel using Promise.allSettled
+      const results = await Promise.allSettled(
+        tasks.map(async (t) => {
+          try {
+            await queryClient.prefetchQuery({
+              queryKey: t.queryKey,
+              queryFn: t.queryFn,
+              staleTime: 5 * 60 * 1000,
+            });
+            if (isMounted) {
+              setBootLogs((prev) =>
+                prev.map((log) => (log.id === t.id ? { ...log, status: 'OK' } : log))
+              );
+            }
+            return { id: t.id, ok: true };
+          } catch (err) {
+            console.warn(`Boot prefetch warning [${t.id}]:`, err);
+            if (isMounted) {
+              setBootLogs((prev) =>
+                prev.map((log) => (log.id === t.id ? { ...log, status: 'FAIL' } : log))
+              );
+            }
+            return { id: t.id, ok: false };
+          }
+        })
+      );
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 600) {
+        await new Promise((r) => setTimeout(r, 600 - elapsed));
+      }
+
+      if (!isMounted) return;
+
+      const hasFailures = results.some((r) => r.status === 'rejected' || (r.value && !r.value.ok));
+      if (hasFailures) {
+        setStatusText('SYSTEM READY (WITH WARNINGS). LAUNCHING KIOSK...');
+      } else {
+        setStatusText('SYSTEM READY. LAUNCHING KIOSK...');
+      }
+
+      await new Promise((r) => setTimeout(r, 450));
+      if (isMounted) {
+        setIsInitializing(false);
+      }
+    };
+
+    runBootSequence();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [queryClient]);
+
+  // ── React Query — baseline datasets ──────────────────────────
 
   const { data: buildings = [] } = useQuery({
     queryKey: ['buildings'],
     queryFn: fetchBuildings,
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: events = [] } = useQuery({
+    queryKey: ['events'],
+    queryFn: fetchEvents,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: clubs = [], isLoading: isClubsLoading } = useQuery({
     queryKey: ['clubs'],
     queryFn: fetchClubs,
-    staleTime: 120_000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: notices = [] } = useQuery({
     queryKey: ['notices'],
     queryFn: fetchNotices,
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Handle URL deep-linking for ?event_id=... (from Web Push Notification clicks)
@@ -187,17 +271,20 @@ function AppContent() {
     queryKey: ['buildingEvents', selectedBuilding?.id],
     queryFn: () => fetchBuildingEvents(selectedBuilding.id),
     enabled: !!selectedBuilding?.id,
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const fetchAllActiveEvents = async () => {
+    if (events && events.length > 0) {
+      return events;
+    }
     const fetches = buildings
       .filter(b => b.active_event_count > 0)
       .map(b =>
         queryClient.fetchQuery({
           queryKey: ['buildingEvents', b.id],
           queryFn: () => fetchBuildingEvents(b.id),
-          staleTime: 60_000,
+          staleTime: 5 * 60 * 1000,
         })
       );
     const arrays = await Promise.all(fetches);
@@ -532,6 +619,17 @@ function AppContent() {
   // ─────────────────────────────────────────────────────────────
   return (
     <MotionConfig reducedMotion="user">
+    <AnimatePresence mode="wait">
+      {isInitializing && (
+        <TerminalBootScreen
+          key="terminal-boot-screen"
+          bootLogs={bootLogs}
+          statusText={statusText}
+          isComplete={!isInitializing}
+        />
+      )}
+    </AnimatePresence>
+
     <div className="h-dvh max-h-dvh w-full bg-grain text-ink font-mono flex flex-col overflow-hidden fixed inset-0 select-none">
 
       {/* ── Kiosk Header Bar ── */}
@@ -698,7 +796,7 @@ function AppContent() {
           isOpen={activeOverlay === 'CLUBS'}
           onClose={closeOverlay}
           clubs={clubs}
-          activeEvents={allActiveEvents}
+          activeEvents={events.length > 0 ? events : allActiveEvents}
           isLoading={isClubsLoading}
           onSelectClub={(club) => {
             setSelectedClub(club);
@@ -709,8 +807,8 @@ function AppContent() {
         <AllEventsModal
           isOpen={activeOverlay === 'ALL_EVENTS'}
           onClose={closeOverlay}
-          allActiveEvents={allActiveEvents}
-          isEventsLoading={isEventsLoading}
+          allActiveEvents={events.length > 0 ? events : allActiveEvents}
+          isEventsLoading={false}
           onSelectEvent={handleSelectEvent}
         />
 
@@ -966,13 +1064,7 @@ function AppContent() {
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">NOTICES</span>
         </button>
 
-        <button onClick={async () => { 
-            switchOverlay('ALL_EVENTS'); 
-            setIsEventsLoading(true);
-            const events = await fetchAllActiveEvents(); 
-            setAllActiveEvents(events); 
-            setIsEventsLoading(false);
-          }}
+        <button onClick={() => switchOverlay('ALL_EVENTS')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all relative focus:outline-none py-0.5">
           <Calendar className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">EVENTS</span>
@@ -992,13 +1084,7 @@ function AppContent() {
           </AnimatePresence>
         </button>
 
-        <button onClick={async () => {
-          if (allActiveEvents.length === 0) {
-            const evts = await fetchAllActiveEvents();
-            setAllActiveEvents(evts);
-          }
-          switchOverlay('CLUBS');
-        }}
+        <button onClick={() => switchOverlay('CLUBS')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>

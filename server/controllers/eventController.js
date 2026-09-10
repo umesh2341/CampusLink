@@ -2,6 +2,46 @@ import pool from '../db/pool.js';
 import { dispatchEventPushNotification } from '../services/pushService.js';
 import { detectSchema } from '../db/schemaHelper.js';
 
+// GET /api/events
+// Retrieve all active campus events across all buildings
+export const getAllEvents = async (req, res) => {
+  try {
+    const schema = await detectSchema();
+    const evtClub = schema.events.organizing_club;
+    const evtReg = schema.events.registration_url;
+    const bldCat = schema.buildings.category;
+
+    const query = `
+      SELECT 
+        e.id,
+        e.title,
+        e.description,
+        e.start_time,
+        e.end_time,
+        e.building_id,
+        e.image_url,
+        e.${evtReg} AS registration_url,
+        e.floor,
+        e.room_number,
+        e.tags,
+        e.club_id,
+        e.${evtClub} AS organizing_club,
+        e.created_at,
+        b.name AS building_name,
+        b.${bldCat} AS building_category
+      FROM events e
+      JOIN buildings b ON e.building_id = b.id
+      WHERE e.end_time >= NOW() AND NOT e.is_hidden
+      ORDER BY e.start_time ASC;
+    `;
+    const { rows } = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching all events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // GET /api/events/:id
 // Retrieve details for a single event
 export const getEventById = async (req, res) => {
