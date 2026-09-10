@@ -57,7 +57,7 @@ function NavMenuDrawer({
         onClose();
         if (onOpenAbout) onOpenAbout();
       },
-      badge: 'V2.0',
+      badge: 'V1.0',
     },
   ];
 
@@ -172,12 +172,7 @@ function NavMenuDrawer({
               })}
             </div>
 
-            {/* Footer info strip */}
-            <div className="bg-card border-t-2 border-ink p-3 shrink-0 text-center">
-              <p className="text-[10px] text-muted uppercase font-bold tracking-widest">
-                ITER, SOA UNIVERSITY • KIOSK V2.0
-              </p>
-            </div>
+
           </motion.aside>
         </>
       )}

@@ -1,5 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+
+const FUNNY_PHRASES = [
+  "> Waking up the campus hamsters...",
+  "> Finding the best route to the canteen...",
+  "> Negotiating with the Wi-Fi router...",
+  "> Locating hidden parking spots...",
+  "> Warming up the caffeine machines...",
+  "> Bribing the security guards...",
+  "> Calibrating the attendance proxy...",
+  "> Generating infinite loop of assignments..."
+];
 
 /**
  * TerminalBootScreen Component
@@ -7,6 +18,37 @@ import { motion } from 'framer-motion';
  * Displays real-time prefetch progress for baseline datasets before fading out.
  */
 export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM...', isComplete = false }) {
+  const [text, setText] = useState('> ');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loopNum, setLoopNum] = useState(0);
+  const [typingSpeed, setTypingSpeed] = useState(50);
+
+  useEffect(() => {
+    let ticker = setTimeout(() => {
+      handleTyping();
+    }, typingSpeed);
+
+    return () => clearTimeout(ticker);
+  }, [text, isDeleting, isComplete]);
+
+  const handleTyping = () => {
+    if (isComplete) return; // Stop animating if done
+    const i = loopNum % FUNNY_PHRASES.length;
+    const fullText = FUNNY_PHRASES[i];
+
+    setText(isDeleting ? fullText.substring(0, text.length - 1) : fullText.substring(0, text.length + 1));
+    setTypingSpeed(isDeleting ? 20 : 50);
+
+    if (!isDeleting && text === fullText) {
+      setTypingSpeed(1000); // Pause at end of phrase
+      setIsDeleting(true);
+    } else if (isDeleting && text === '> ') {
+      setIsDeleting(false);
+      setLoopNum(loopNum + 1);
+      setTypingSpeed(300); // Pause before typing next
+    }
+  };
+
   return (
     <motion.div
       key="boot-splash-screen"
@@ -24,38 +66,17 @@ export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM
             <span className="w-3 h-3 bg-ink/30 rounded-full inline-block border border-ink" />
           </div>
           <span className="font-display text-sm tracking-wider uppercase font-bold text-ink/80">
-            ITER CAMPUSLINK v1.0
+            CAMPUSLINK
           </span>
         </div>
 
         {/* Boot Logs */}
         <div className="font-display text-lg sm:text-xl space-y-1 text-ink/90 leading-snug">
-          <div className="text-muted tracking-wider uppercase font-bold">
-            [ SYSTEM BOOT : ITER CAMPUSLINK v1.0 ]
-          </div>
-          <div className="border-b border-dashed border-ink/40 my-2" />
 
-          {bootLogs.map((log, index) => (
-            <div key={log.id || index} className="flex justify-between items-center tracking-wide">
-              <span>{log.label}</span>
-              <span className="font-bold ml-2">
-                {log.status === 'PENDING' && <span className="text-signal animate-pulse">[ LOADING ]</span>}
-                {log.status === 'OK' && <span className="text-confirm">[ OK ]</span>}
-                {log.status === 'FAIL' && <span className="text-signal">[ WARN ]</span>}
-              </span>
-            </div>
-          ))}
-
-          <div className="border-b border-dashed border-ink/40 my-2" />
-          
-          {/* Status Line */}
-          <div className="pt-1 flex items-center justify-between">
-            <span className="font-bold tracking-wider text-ink uppercase">
-              STATUS: {statusText}
-            </span>
-            {isComplete && (
-              <span className="inline-block w-2.5 h-4 bg-ink animate-pulse ml-1" />
-            )}
+          {/* Typing Animation */}
+          <div className="h-8 flex items-center tracking-wide">
+            <span>{text}</span>
+            <span className="inline-block w-2.5 h-5 bg-ink animate-pulse ml-1" />
           </div>
         </div>
 

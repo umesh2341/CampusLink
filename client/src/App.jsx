@@ -198,9 +198,9 @@ function AppContent() {
 
       const hasFailures = results.some((r) => r.status === 'rejected' || (r.value && !r.value.ok));
       if (hasFailures) {
-        setStatusText('SYSTEM READY (WITH WARNINGS). LAUNCHING KIOSK...');
+        setStatusText('LAUNCHING CAMPUSLINK...');
       } else {
-        setStatusText('SYSTEM READY. LAUNCHING KIOSK...');
+        setStatusText('LAUNCHING CAMPUSLINK...');
       }
 
       await new Promise((r) => setTimeout(r, 450));
@@ -804,6 +804,18 @@ function AppContent() {
           }}
         />
 
+        {/* ── Club Detail Card Modal ── */}
+        <ClubCardModal
+          club={selectedClub}
+          isOpen={isClubDetailOpen}
+          onClose={() => {
+            setIsClubDetailOpen(false);
+            setSelectedClub(null);
+          }}
+          activeEvents={allActiveEvents}
+          onSelectEvent={handleSelectEvent}
+        />
+
         <AllEventsModal
           isOpen={activeOverlay === 'ALL_EVENTS'}
           onClose={closeOverlay}
@@ -969,17 +981,6 @@ function AppContent() {
         onStartNavigation={handleStartNavigation}
       />
 
-      {/* ── Club Detail Card Modal ── */}
-      <ClubCardModal
-        club={selectedClub}
-        isOpen={isClubDetailOpen}
-        onClose={() => {
-          setIsClubDetailOpen(false);
-          setSelectedClub(null);
-        }}
-        activeEvents={allActiveEvents}
-        onSelectEvent={handleSelectEvent}
-      />
 
       {/* ── Event Detail Modal (Rendered last so it sits on top of other z-50 modals) ── */}
       <EventDetailModal
@@ -1030,7 +1031,6 @@ function AppContent() {
             <div className="text-xs text-ink leading-relaxed space-y-2">
               <p><strong>CAMPUSLINK</strong> is a wayfinding &amp; event kiosk for students at <strong>ITER, SOA University</strong>.</p>
               <p>Browse workshops, competitions, and society drives. Search departments to resolve exact floor &amp; room numbers.</p>
-              <p className="text-muted text-[10px] border-t border-ink/20 pt-2">— Terminal Edition v2.0</p>
             </div>
           </motion.div>
         </div>
@@ -1058,13 +1058,13 @@ function AppContent() {
           </button>
         ) : null}
 
-        <button onClick={() => switchOverlay('NOTICE_BOARD')}
+        <button onClick={() => activeOverlay === 'NOTICE_BOARD' ? closeOverlay() : switchOverlay('NOTICE_BOARD')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <ClipboardList className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">NOTICES</span>
         </button>
 
-        <button onClick={() => switchOverlay('ALL_EVENTS')}
+        <button onClick={() => activeOverlay === 'ALL_EVENTS' ? closeOverlay() : switchOverlay('ALL_EVENTS')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all relative focus:outline-none py-0.5">
           <Calendar className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">EVENTS</span>
@@ -1084,13 +1084,13 @@ function AppContent() {
           </AnimatePresence>
         </button>
 
-        <button onClick={() => switchOverlay('CLUBS')}
+        <button onClick={() => activeOverlay === 'CLUBS' ? closeOverlay() : switchOverlay('CLUBS')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <Users className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">CLUBS</span>
         </button>
 
-        <button onClick={() => switchOverlay('PROFILE')}
+        <button onClick={() => activeOverlay === 'PROFILE' ? closeOverlay() : switchOverlay('PROFILE')}
           className="flex flex-col items-center gap-1 text-ink hover:text-signal active:translate-y-[2px] transition-all focus:outline-none py-0.5">
           <User className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">PROFILE</span>

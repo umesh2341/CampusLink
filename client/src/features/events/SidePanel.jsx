@@ -96,7 +96,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onSt
               </div>
 
               {/* ── Transport Mode & Start Navigation Action ── */}
-              {onStartNavigation && (
+              {/* onStartNavigation && (
                 <div className="space-y-2 pt-1 border-t border-ink/10">
                   <div className="space-y-1">
                     <div className="text-[9px] font-bold text-muted uppercase tracking-widest">
@@ -134,7 +134,7 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onSt
                     <span>START NAVIGATION</span>
                   </button>
                 </div>
-              )}
+              ) */}
             </div>
 
             {/* ── Content ── */}
