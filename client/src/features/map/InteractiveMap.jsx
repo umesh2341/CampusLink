@@ -3,7 +3,6 @@ import { LocateFixed, Plus, Minus, Type } from 'lucide-react';
 import mapSvg from '../../assets/campus-map.svg?raw';
 import MapMarker from './MapMarker';
 import LiveUserMarker from './LiveUserMarker';
-import RedBullMapMarker from './RedBullMapMarker';
 import NavigationRouteLayer from './components/NavigationRouteLayer';
 import NavigationHUD from './components/NavigationHUD';
 import { buildingCoords } from '../../shared/lib/buildingCoords';
@@ -597,11 +596,6 @@ function InteractiveMap({
               />
             )}
 
-            {/* Live Red Bull Vehicle Marker */}
-            <RedBullMapMarker
-              onClick={onSelectRedBull}
-              onVehicleStateUpdate={onRedBullStateUpdate}
-            />
           </div>
           {/* Lowered the zoom threshold from 0.55 to 0.25 so labels stay visible longer when zoomed out */}
           {showLabels && zoom >= 0.25 && (
