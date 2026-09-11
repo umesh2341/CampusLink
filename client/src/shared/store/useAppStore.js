@@ -1,16 +1,13 @@
 /**
  * useAppStore — global UI state for CampusLink
  *
- * Manages three cross-component concerns that were previously
- * scattered across App.jsx useState calls and prop-drilled:
+ * Manages cross-component concerns:
+ *  1. user / auth state — reactive session state and resetApp action
+ *  2. selectedBuilding  — which building is highlighted on the map
+ *  3. activeOverlay     — controls open modals & side panels
+ *  4. lastViewedMap     — per-building "last viewed" timestamp
  *
- *  1. selectedBuilding  — which building is highlighted on the map
- *                         (shared by InteractiveMap and SearchBar result taps)
- *  2. isSidePanelOpen   — controls SidePanel visibility
- *  3. lastViewedMap     — per-building "last viewed" timestamp used for
- *                         seen/unseen badge colour logic; persisted to localStorage
- *
- * React Query stays untouched — this store handles only UI/derived state.
+ * React Query stays untouched — this store handles UI/derived state.
  */
 
 import { create } from 'zustand';
@@ -35,6 +32,15 @@ function saveLastViewed(map) {
 }
 
 const useAppStore = create((set, get) => ({
+  // ── Auth & Session State ─────────────────────────────────
+  user: null,
+  setUser: (user) => set({ user }),
+  resetApp: () => set({ 
+    user: null, 
+    selectedBuilding: null, 
+    activeOverlay: null 
+  }),
+
   // ── Unified Overlay State ─────────────────────────────────
   /**
    * Only one primary overlay can be open at a time.

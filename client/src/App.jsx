@@ -16,6 +16,7 @@ import {
   API_BASE,
 } from './shared/lib/api';
 import TerminalBootScreen from './features/bootstrap/TerminalBootScreen';
+import LoginScreen from './features/auth/LoginScreen';
 import {
   convertGpsToCampusCoordinates,
   calculateDistanceMeters,
@@ -61,9 +62,11 @@ import {
 
 function AppContent() {
   const queryClient = useQueryClient();
-  const { user, profile, isLoading, signInWithGoogle, signOut } = useAuth();
+  const { user: authUser, profile, isLoading, signInWithGoogle, signOut } = useAuth();
 
-  // ── Zustand store — building selection, panel, seen/unseen, overlays ──
+  // ── Zustand store — auth, building selection, panel, seen/unseen, overlays ──
+  const storeUser         = useAppStore(s => s.user);
+  const resetApp          = useAppStore(s => s.resetApp);
   const selectedBuilding  = useAppStore(s => s.selectedBuilding);
   const activeOverlay     = useAppStore(s => s.activeOverlay);
   const switchOverlay     = useAppStore(s => s.switchOverlay);
@@ -71,6 +74,9 @@ function AppContent() {
   const lastViewedMap     = useAppStore(s => s.lastViewedMap);
   const selectBuilding    = useAppStore(s => s.selectBuilding);
   const highlightBuilding = useAppStore(s => s.highlightBuilding);
+
+  // Reactive user session across Auth Context & Zustand store
+  const user = authUser ?? storeUser;
 
   // ── Local UI state (not shared across layers) ──────────────
   const [selectedEvent,        setSelectedEvent]        = useState(null);
@@ -138,6 +144,12 @@ function AppContent() {
       return;
     }
     startNavigation(building, userLocation, mode);
+  };
+
+  const handleSignOut = async () => {
+    resetApp();
+    queryClient.clear();
+    await signOut();
   };
 
   // ── Kiosk Boot Initialization Layer ────────────────────────
@@ -617,20 +629,27 @@ function AppContent() {
   }, []);
 
   // ─────────────────────────────────────────────────────────────
+  const isBooting = isInitializing || isLoading;
+
   return (
     <MotionConfig reducedMotion="user">
-    <AnimatePresence mode="wait">
-      {isInitializing && (
-        <TerminalBootScreen
-          key="terminal-boot-screen"
-          bootLogs={bootLogs}
-          statusText={statusText}
-          isComplete={!isInitializing}
-        />
-      )}
-    </AnimatePresence>
+      <AnimatePresence mode="wait">
+        {isBooting && (
+          <TerminalBootScreen
+            key="terminal-boot-screen"
+            bootLogs={bootLogs}
+            statusText={statusText}
+            isComplete={!isBooting}
+          />
+        )}
+      </AnimatePresence>
 
-    <div className="h-dvh max-h-dvh w-full bg-grain text-ink font-mono flex flex-col overflow-hidden fixed inset-0 select-none">
+      {!isBooting && !user && (
+        <LoginScreen key="login-screen" />
+      )}
+
+      {!isBooting && user && (
+        <div className="h-dvh max-h-dvh w-full bg-grain text-ink font-mono flex flex-col overflow-hidden fixed inset-0 select-none">
 
       {/* ── Kiosk Header Bar ── */}
       <header className="bg-card border-b-2 border-ink px-4 py-2.5 flex items-center justify-between z-30 select-none shrink-0">
@@ -937,7 +956,7 @@ function AppContent() {
                     </div>
                   </div>
                   <button 
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     className="w-full flex items-center justify-center gap-2 text-xs font-bold border-2 border-red-500 text-red-500 px-3 py-2 rounded-xs bg-paper hover:bg-red-500 hover:text-white transition-all active:translate-y-[1px] mt-2"
                   >
                     <LogOut className="w-4 h-4" />
@@ -1114,7 +1133,8 @@ function AppContent() {
         onClose={closeOverlay}
       />
 
-    </div>
+        </div>
+      )}
     </MotionConfig>
   );
 }
