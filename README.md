@@ -82,3 +82,14 @@ If your smartphone cannot connect to `http://<local-ip>:3000`:
      New-NetFirewallRule -DisplayName "CampusLink Dev" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
      ```
 3. **Public Wi-Fi Isolation:** Some institutional or public Wi-Fi networks block peer-to-peer traffic between connected devices ("AP Isolation"). If using a university network that enforces isolation, connect both devices to a mobile hotspot instead.
+
+---
+
+## Deployment
+
+The production client build runs with:
+
+```cmd
+cd client
+npm run build
+```
