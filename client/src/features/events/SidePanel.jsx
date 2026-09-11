@@ -64,10 +64,10 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onSt
 
           {/* Side Panel / Bottom Sheet */}
           <motion.aside
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'tween', duration: 0.2, ease: [0.25, 0.8, 0.25, 1] }}
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="fixed z-50 bg-paper flex flex-col font-mono
               inset-x-0 bottom-0 top-0
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
