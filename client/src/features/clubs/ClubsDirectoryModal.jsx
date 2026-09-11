@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Search, ChevronRight, Sparkles, Filter } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchEvents } from '../../shared/lib/api';
+import { matchEventToClub, isEventActiveOrScheduled } from './ClubCardModal';
 
 const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY', 'OFFICIAL'];
 
@@ -8,20 +11,31 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
-  // Compute active event counts per club (by id preferred, fallback to name match)
+  // Read already-cached events directly from TanStack Query
+  const { data: queryEvents = [] } = useQuery({
+    queryKey: ['events'],
+    queryFn: fetchEvents,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const allEvents = queryEvents && queryEvents.length > 0 ? queryEvents : activeEvents;
+
+  // Compute active event counts per club using standardized relation matching
   const clubEventCounts = useMemo(() => {
-    const countById = {};
-    const countByName = {};
-    activeEvents.forEach((evt) => {
-      if (evt.club_id) {
-        countById[evt.club_id] = (countById[evt.club_id] || 0) + 1;
-      } else if (evt.organizing_club) {
-        const key = evt.organizing_club.toLowerCase();
-        countByName[key] = (countByName[key] || 0) + 1;
-      }
+    const counts = {};
+    if (!Array.isArray(allEvents) || allEvents.length === 0) return counts;
+
+    clubs.forEach((club) => {
+      const matchingEvents = allEvents.filter((event) => {
+        return matchEventToClub(event, club) && isEventActiveOrScheduled(event);
+      });
+
+      const key = club.id || club.name;
+      counts[key] = matchingEvents.length;
     });
-    return { byId: countById, byName: countByName };
-  }, [activeEvents]);
+
+    return counts;
+  }, [allEvents, clubs]);
 
   // Filter clubs by category and search text
   const filteredClubs = useMemo(() => {
@@ -135,9 +149,7 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
               </div>
             ) : (
               filteredClubs.map((club) => {
-                const activeCount =
-                  (clubEventCounts.byId[club.id] || 0) +
-                  (clubEventCounts.byName[club.name.toLowerCase()] || 0);
+                const activeCount = clubEventCounts[club.id || club.name] || 0;
 
                 return (
                   <motion.div
