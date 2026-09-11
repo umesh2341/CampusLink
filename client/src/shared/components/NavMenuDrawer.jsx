@@ -30,10 +30,10 @@ function NavMenuDrawer({
     {
       id: 'community',
       label: 'Community Hub',
-      description: 'Join the official ITER student Discord',
+      description: '',
       icon: MessageSquare,
       onClick: () => {
-        window.open('https://discord.gg/iter-campus', '_blank', 'noopener,noreferrer');
+        window.open('https://discord.gg/pvuettzbX9', '_blank', 'noopener,noreferrer');
       },
       badge: 'DISCORD',
       external: true,
@@ -157,9 +157,11 @@ function NavMenuDrawer({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted leading-tight mt-0.5">
-                          {item.description}
-                        </p>
+                        {item.description && (
+                          <p className="text-[11px] text-muted leading-tight mt-0.5">
+                            {item.description}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {item.external ? (

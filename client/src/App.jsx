@@ -1029,8 +1029,8 @@ function AppContent() {
               </button>
             </div>
             <div className="text-xs text-ink leading-relaxed space-y-2">
-              <p><strong>CAMPUSLINK</strong> is a wayfinding &amp; event kiosk for students at <strong>ITER, SOA University</strong>.</p>
-              <p>Browse workshops, competitions, and society drives. Search departments to resolve exact floor &amp; room numbers.</p>
+              <p><strong>CAMPUSLINK</strong> is your all-in-one campus companion, built for students at <strong>ITER, SOA University</strong>.</p>
+              <p>Navigate the campus with ease, stay on top of upcoming events, workshops, and hackathons, discover clubs, and never miss an important college notice — all in one place.</p>
             </div>
           </motion.div>
         </div>

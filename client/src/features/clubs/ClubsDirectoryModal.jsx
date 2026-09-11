@@ -189,7 +189,9 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
           {/* Footer Info Strip */}
           <div className="bg-paper border-t-2 border-ink px-4 py-2.5 flex items-center justify-between shrink-0">
             <span className="text-[10px] text-muted uppercase font-bold tracking-wider">
-              TOTAL CLUBS: {clubs.length}
+              {filteredClubs.length === clubs.length
+                ? `TOTAL CLUBS: ${clubs.length}`
+                : `SHOWING: ${filteredClubs.length} / ${clubs.length}`}
             </span>
             <button
               onClick={onClose}
