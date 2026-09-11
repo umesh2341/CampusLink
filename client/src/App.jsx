@@ -101,6 +101,7 @@ function AppContent() {
   );
 
   const [isLiveLocationActive, setIsLiveLocationActive]   = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [userLocation,         setUserLocation]           = useState(null);
   const [locationError,        setLocationError]          = useState(null);
   const [isEventsLoading,      setIsEventsLoading]        = useState(false);
@@ -152,6 +153,31 @@ function AppContent() {
     queryClient.clear();
     await signOut();
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkNotificationStatus = async () => {
+      const isSupported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+      if (!isSupported || Notification.permission !== 'granted') {
+        if (isMounted) setNotificationsEnabled(false);
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (isMounted) setNotificationsEnabled(Boolean(subscription));
+      } catch {
+        if (isMounted) setNotificationsEnabled(false);
+      }
+    };
+
+    checkNotificationStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeOverlay, user?.id]);
 
   // ── Kiosk Boot Initialization Layer ────────────────────────
   const [isInitializing, setIsInitializing] = useState(true);
@@ -288,7 +314,7 @@ function AppContent() {
     }
   }, [buildings, selectBuilding]);
 
-  const { data: buildingEvents = [] } = useQuery({
+  const { data: buildingEvents = [], isLoading: isBuildingEventsLoading } = useQuery({
     queryKey: ['buildingEvents', selectedBuilding?.id],
     queryFn: () => fetchBuildingEvents(selectedBuilding.id),
     enabled: !!selectedBuilding?.id,
@@ -712,6 +738,9 @@ function AppContent() {
             title={activeOverlay === 'NAV_MENU' ? "Close menu" : "Open menu"}
             className="p-1.5 border border-transparent hover:border-ink hover:bg-paper text-ink rounded-xs transition-all focus:outline-none active:translate-y-[1px] relative z-50"
           >
+            {!notificationsEnabled && activeOverlay !== 'NAV_MENU' && (
+              <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full border border-ink bg-signal" aria-label="Notifications are off" />
+            )}
             <div className="w-5 h-5 flex items-center justify-center relative">
               {activeOverlay === 'NAV_MENU' ? (
                 <X className="w-5 h-5 text-ink transition-transform duration-300 rotate-90" />
@@ -801,6 +830,7 @@ function AppContent() {
         {/* Slide-in Navigation Menu Drawer */}
         <NavMenuDrawer
           isOpen={activeOverlay === 'NAV_MENU'}
+          notificationsEnabled={notificationsEnabled}
           onClose={closeOverlay}
           onOpenNotifications={() => switchOverlay('NOTIFICATIONS')}
           onOpenFeedback={() => switchOverlay('FEEDBACK')}
@@ -1003,6 +1033,7 @@ function AppContent() {
       <SidePanel
         building={selectedBuilding}
         events={buildingEvents}
+        isLoading={isBuildingEventsLoading}
         isOpen={activeOverlay === 'SIDE_PANEL'}
         onClose={closeOverlay}
         onSelectEvent={handleSelectEvent}

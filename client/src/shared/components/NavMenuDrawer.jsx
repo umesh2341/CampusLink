@@ -14,6 +14,7 @@ function NavMenuDrawer({
   isAdmin,
   onOpenAdminRequests,
   onOpenManageEvents,
+  notificationsEnabled = true,
 }) {
   const menuItems = [
     {
@@ -25,7 +26,7 @@ function NavMenuDrawer({
         onClose();
         onOpenNotifications();
       },
-      badge: 'PUSH ALERTS',
+      badge: 'ENABLE ALERTS',
     },
     {
       id: 'community',
@@ -140,8 +141,11 @@ function NavMenuDrawer({
                   <button
                     key={item.id}
                     onClick={item.onClick}
-                    className="w-full text-left bg-card hover:bg-paper border-2 border-ink shadow-hard hover:shadow-hard-lg rounded-xs p-3 flex items-center justify-between group transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] active:translate-x-[1px] active:translate-y-[1px] focus:outline-none cursor-pointer"
+                    className="relative w-full text-left bg-card hover:bg-paper border-2 border-ink shadow-hard hover:shadow-hard-lg rounded-xs p-3 flex items-center justify-between group transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] active:translate-x-[1px] active:translate-y-[1px] focus:outline-none cursor-pointer"
                   >
+                    {item.id === 'notifications' && !notificationsEnabled && (
+                      <span className="absolute right-2 top-2 h-2.5 w-2.5 animate-pulse rounded-full border border-ink bg-signal" aria-label="Notifications are off" />
+                    )}
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xs bg-paper border-2 border-ink flex items-center justify-center group-hover:bg-signal group-hover:text-ink transition-colors shrink-0">
                         <Icon className="w-5 h-5 text-ink" />

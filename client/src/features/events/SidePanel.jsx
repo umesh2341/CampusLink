@@ -19,7 +19,7 @@ const TRANSPORT_OPTIONS = [
   { id: 'CAR',  label: 'Car',  icon: '🚗' },
 ];
 
-function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onStartNavigation }) {
+function SidePanel({ building, events = [], isLoading = false, isOpen, onClose, onSelectEvent, onStartNavigation }) {
   const [selectedMode, setSelectedMode] = React.useState('WALK');
 
   if (!building) return null;
@@ -142,10 +142,16 @@ function SidePanel({ building, events = [], isOpen, onClose, onSelectEvent, onSt
               {/* Section header */}
               <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase tracking-widest text-ink border-b-2 border-ink/20 pb-1.5">
                 <span>[ Active Events ]</span>
-                <span className="bg-ink text-paper text-[10px] px-1.5 py-0.5 rounded-xs">{events.length}</span>
+                <span className="bg-ink text-paper text-[10px] px-1.5 py-0.5 rounded-xs">
+                  {isLoading ? '...' : events.length}
+                </span>
               </div>
 
-              {events.length === 0 ? (
+              {isLoading ? (
+                <div className="h-44 flex items-center justify-center border-2 border-dashed border-signal rounded-xs bg-card">
+                  <p className="font-mono text-xs font-bold uppercase tracking-widest text-signal animate-pulse">— Loading...</p>
+                </div>
+              ) : events.length === 0 ? (
                 <div className="h-44 flex items-center justify-center border-2 border-dashed border-ink/30 rounded-xs bg-card">
                   <p className="font-mono text-xs text-muted uppercase">— No active events here</p>
                 </div>
