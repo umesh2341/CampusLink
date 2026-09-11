@@ -840,7 +840,7 @@ function AppContent() {
             setIsClubDetailOpen(false);
             setSelectedClub(null);
           }}
-          activeEvents={allActiveEvents}
+          activeEvents={events.length > 0 ? events : allActiveEvents}
           onSelectEvent={handleSelectEvent}
         />
 
