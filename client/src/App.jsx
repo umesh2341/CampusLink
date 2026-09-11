@@ -39,6 +39,7 @@ import NoticeBanner from './features/notices/NoticeBanner';
 import NoticeBoardModal from './features/notices/NoticeBoardModal';
 import UpdatePrompt from './shared/components/UpdatePrompt';
 import RedBullViewerModal from './features/map/RedBullViewerModal.jsx';
+import campusMap from '../../1000139929.png';
 
 const AddEventForm = lazy(() => import('./features/events/AddEventForm'));
 const AddNoticeForm = lazy(() => import('./features/notices/AddNoticeForm'));
@@ -154,6 +155,7 @@ function AppContent() {
 
   // ── Kiosk Boot Initialization Layer ────────────────────────
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isCampusMapReady, setIsCampusMapReady] = useState(false);
   const [bootLogs, setBootLogs] = useState([
     { id: 'map', label: '> MOUNTING SVG CAMPUS MAP ..........', status: 'PENDING' },
     { id: 'events', label: '> SYNCING ACTIVE EVENTS ...........', status: 'PENDING' },
@@ -161,6 +163,13 @@ function AppContent() {
     { id: 'notices', label: '> LOADING CAMPUS NOTICES ..........', status: 'PENDING' },
   ]);
   const [statusText, setStatusText] = useState('BOOTING SYSTEM...');
+
+  useEffect(() => {
+    const image = new Image();
+    image.onload = () => setIsCampusMapReady(true);
+    image.onerror = () => setIsCampusMapReady(true);
+    image.src = campusMap;
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -629,7 +638,7 @@ function AppContent() {
   }, []);
 
   // ─────────────────────────────────────────────────────────────
-  const isBooting = isInitializing || isLoading;
+  const isBooting = isInitializing || isLoading || (!user && !isCampusMapReady);
 
   return (
     <MotionConfig reducedMotion="user">
