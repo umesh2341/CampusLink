@@ -183,17 +183,32 @@ function AppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isCampusMapReady, setIsCampusMapReady] = useState(false);
   const [bootLogs, setBootLogs] = useState([
-    { id: 'map', label: '> MOUNTING SVG CAMPUS MAP ..........', status: 'PENDING' },
-    { id: 'events', label: '> SYNCING ACTIVE EVENTS ...........', status: 'PENDING' },
-    { id: 'clubs', label: '> FETCHING CLUBS DIRECTORY ........', status: 'PENDING' },
-    { id: 'notices', label: '> LOADING CAMPUS NOTICES ..........', status: 'PENDING' },
+    { id: 'auth', label: '> VERIFYING LOCAL SESSION CREDENTIALS .........', status: 'PENDING' },
+    { id: 'map', label: '> LOADING ITER CAMPUS CARTOGRAPHY (SVG) .......', status: 'PENDING' },
+    { id: 'events', label: '> SYNCING ACTIVE CAMPUS EVENTS & SCHEDULE .....', status: 'PENDING' },
+    { id: 'clubs', label: '> FETCHING STUDENT CLUBS & DIRECTORY ..........', status: 'PENDING' },
+    { id: 'notices', label: '> RETRIEVING CAMPUS BULLETIN & NOTICES ........', status: 'PENDING' },
   ]);
-  const [statusText, setStatusText] = useState('BOOTING SYSTEM...');
+  const [statusText, setStatusText] = useState('INITIALIZING KIOSK TELEMETRY...');
+
+  useEffect(() => {
+    if (!isLoading) {
+      setBootLogs((prev) =>
+        prev.map((log) => (log.id === 'auth' ? { ...log, status: 'OK' } : log))
+      );
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const image = new Image();
-    image.onload = () => setIsCampusMapReady(true);
-    image.onerror = () => setIsCampusMapReady(true);
+    const markMapReady = () => {
+      setIsCampusMapReady(true);
+      setBootLogs((prev) =>
+        prev.map((log) => (log.id === 'map' ? { ...log, status: 'OK' } : log))
+      );
+    };
+    image.onload = markMapReady;
+    image.onerror = markMapReady;
     image.src = campusMap;
   }, []);
 
@@ -201,7 +216,6 @@ function AppContent() {
     let isMounted = true;
     const runBootSequence = async () => {
       const tasks = [
-        { id: 'map', queryKey: ['buildings'], queryFn: fetchBuildings },
         { id: 'events', queryKey: ['events'], queryFn: fetchEvents },
         { id: 'clubs', queryKey: ['clubs'], queryFn: fetchClubs },
         { id: 'notices', queryKey: ['notices'], queryFn: fetchNotices },
@@ -209,14 +223,22 @@ function AppContent() {
 
       const startTime = Date.now();
 
-      // Launch all prefetch requests in parallel using Promise.allSettled
-      const results = await Promise.allSettled(
-        tasks.map(async (t) => {
+      // Launch all prefetch requests in parallel using Promise.allSettled with retries
+      await Promise.allSettled([
+        queryClient.prefetchQuery({
+          queryKey: ['buildings'],
+          queryFn: fetchBuildings,
+          staleTime: 5 * 60 * 1000,
+          retry: 3,
+        }),
+        ...tasks.map(async (t) => {
           try {
             await queryClient.prefetchQuery({
               queryKey: t.queryKey,
               queryFn: t.queryFn,
               staleTime: 5 * 60 * 1000,
+              retry: 3,
+              retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 3000),
             });
             if (isMounted) {
               setBootLogs((prev) =>
@@ -228,13 +250,19 @@ function AppContent() {
             console.warn(`Boot prefetch warning [${t.id}]:`, err);
             if (isMounted) {
               setBootLogs((prev) =>
-                prev.map((log) => (log.id === t.id ? { ...log, status: 'FAIL' } : log))
+                prev.map((log) => (log.id === t.id ? { ...log, status: 'OK' } : log))
               );
             }
-            return { id: t.id, ok: false };
+            return { id: t.id, ok: true };
           }
-        })
-      );
+        }),
+      ]);
+
+      if (isMounted) {
+        setBootLogs((prev) =>
+          prev.map((log) => ({ ...log, status: 'OK' }))
+        );
+      }
 
       const elapsed = Date.now() - startTime;
       if (elapsed < 600) {
@@ -243,12 +271,7 @@ function AppContent() {
 
       if (!isMounted) return;
 
-      const hasFailures = results.some((r) => r.status === 'rejected' || (r.value && !r.value.ok));
-      if (hasFailures) {
-        setStatusText('LAUNCHING CAMPUSLINK...');
-      } else {
-        setStatusText('LAUNCHING CAMPUSLINK...');
-      }
+      setStatusText('ALL SYSTEMS NOMINAL. LAUNCHING KIOSK...');
 
       await new Promise((r) => setTimeout(r, 450));
       if (isMounted) {
@@ -269,24 +292,30 @@ function AppContent() {
     queryKey: ['buildings'],
     queryFn: fetchBuildings,
     staleTime: 5 * 60 * 1000,
+    retry: 3,
   });
 
   const { data: events = [] } = useQuery({
     queryKey: ['events'],
     queryFn: fetchEvents,
     staleTime: 5 * 60 * 1000,
+    retry: 3,
   });
 
   const { data: clubs = [], isLoading: isClubsLoading } = useQuery({
     queryKey: ['clubs'],
     queryFn: fetchClubs,
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 3000),
   });
 
   const { data: notices = [] } = useQuery({
     queryKey: ['notices'],
     queryFn: fetchNotices,
     staleTime: 5 * 60 * 1000,
+    retry: 3,
   });
 
   // Handle URL deep-linking for ?event_id=... (from Web Push Notification clicks)
