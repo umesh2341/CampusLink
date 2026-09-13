@@ -1,53 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-
-const FUNNY_PHRASES = [
-  "> Waking up the campus hamsters...",
-  "> Finding the best route to the canteen...",
-  "> Negotiating with the Wi-Fi router...",
-  "> Locating hidden parking spots...",
-  "> Warming up the caffeine machines...",
-  "> Bribing the security guards...",
-  "> Calibrating the attendance proxy...",
-  "> Generating infinite loop of assignments..."
-];
 
 /**
  * TerminalBootScreen Component
  * Full-screen loading overlay styled as a terminal / wayfinding kiosk.
- * Displays real-time prefetch progress for baseline datasets before fading out.
+ * Displays real-time telemetry prefetch progress for campus baseline datasets.
  */
-export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM...', isComplete = false }) {
-  const [text, setText] = useState('> ');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [loopNum, setLoopNum] = useState(0);
-  const [typingSpeed, setTypingSpeed] = useState(50);
-
-  useEffect(() => {
-    let ticker = setTimeout(() => {
-      handleTyping();
-    }, typingSpeed);
-
-    return () => clearTimeout(ticker);
-  }, [text, isDeleting, isComplete]);
-
-  const handleTyping = () => {
-    if (isComplete) return; // Stop animating if done
-    const i = loopNum % FUNNY_PHRASES.length;
-    const fullText = FUNNY_PHRASES[i];
-
-    setText(isDeleting ? fullText.substring(0, text.length - 1) : fullText.substring(0, text.length + 1));
-    setTypingSpeed(isDeleting ? 20 : 50);
-
-    if (!isDeleting && text === fullText) {
-      setTypingSpeed(1000); // Pause at end of phrase
-      setIsDeleting(true);
-    } else if (isDeleting && text === '> ') {
-      setIsDeleting(false);
-      setLoopNum(loopNum + 1);
-      setTypingSpeed(300); // Pause before typing next
-    }
-  };
+export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING KIOSK...', isComplete = false }) {
+  const completedCount = bootLogs.filter((l) => l.status === 'OK').length;
+  const progressPercent = isComplete
+    ? 100
+    : Math.max(15, Math.round((completedCount / Math.max(1, bootLogs.length)) * 100));
 
   return (
     <motion.div
@@ -57,39 +20,64 @@ export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.4, ease: 'easeOut' } }}
       className="fixed inset-0 z-[9999] bg-paper text-ink flex flex-col items-center justify-center p-4 sm:p-6 font-mono select-none overflow-hidden bg-grain"
     >
-      <div className="w-full max-w-lg bg-paper border-2 border-ink shadow-hard-xl rounded-sm p-4 sm:p-6 flex flex-col space-y-4">
+      <div className="w-full max-w-xl bg-paper border-2 border-ink shadow-hard-xl rounded-sm p-4 sm:p-6 flex flex-col space-y-3 font-mono">
         {/* Terminal Header */}
-        <div className="flex items-center justify-between border-b-2 border-ink pb-3">
+        <div className="flex items-center justify-between border-b-2 border-ink pb-2.5">
           <div className="flex items-center space-x-2">
             <span className="w-3 h-3 bg-signal rounded-full inline-block border border-ink" />
             <span className="w-3 h-3 bg-confirm rounded-full inline-block border border-ink" />
             <span className="w-3 h-3 bg-ink/30 rounded-full inline-block border border-ink" />
           </div>
-          <span className="font-display text-sm tracking-wider uppercase font-bold text-ink/80">
-            CAMPUSLINK
+          <span className="font-mono text-xs sm:text-sm tracking-wider uppercase font-bold text-ink">
+            [ INITIALIZING ITER CAMPUSLINK TERMINAL v1.0 ]
           </span>
         </div>
 
-        {/* Boot Logs */}
-        <div className="font-display text-lg sm:text-xl space-y-1 text-ink/90 leading-snug">
+        {/* Divider */}
+        <div className="text-ink/40 text-xs sm:text-sm tracking-tighter leading-none select-none font-mono">
+          ------------------------------------------------
+        </div>
 
-          {/* Typing Animation */}
-          <div className="h-8 flex items-center tracking-wide">
-            <span>{text}</span>
-            <span className="inline-block w-2.5 h-5 bg-ink animate-pulse ml-1" />
-          </div>
+        {/* Telemetry Logs */}
+        <div className="space-y-1.5 py-1 font-mono text-xs sm:text-sm text-ink leading-tight">
+          {bootLogs.map((log) => {
+            const isOk = log.status === 'OK';
+            const isFail = log.status === 'FAIL';
+            const statusTag = isOk ? '[ OK ]' : isFail ? '[ FAIL ]' : '[ ... ]';
+            const statusColor = isOk
+              ? 'text-confirm font-bold'
+              : isFail
+              ? 'text-red-600 font-bold'
+              : 'text-amber-600 animate-pulse';
+
+            return (
+              <div key={log.id} className="flex items-center justify-between tracking-tight">
+                <span className="truncate pr-2">{log.label}</span>
+                <span className={`shrink-0 ${statusColor}`}>{statusTag}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="text-ink/40 text-xs sm:text-sm tracking-tighter leading-none select-none font-mono">
+          ------------------------------------------------
+        </div>
+
+        {/* Status Line */}
+        <div className="font-mono text-xs sm:text-sm font-bold uppercase tracking-wider text-ink flex items-center justify-between pt-0.5">
+          <span className="truncate">
+            STATUS: {isComplete || completedCount === bootLogs.length ? 'ALL SYSTEMS NOMINAL. LAUNCHING KIOSK...' : statusText}
+          </span>
+          <span className="inline-block w-2 h-4 bg-ink animate-pulse ml-2 shrink-0" />
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-paper border border-ink h-2.5 rounded-xs overflow-hidden mt-2 p-[1px]">
+        <div className="w-full bg-paper border-2 border-ink h-3 rounded-xs overflow-hidden mt-1 p-[1px]">
           <motion.div
             className="h-full bg-ink rounded-xs"
-            initial={{ width: '5%' }}
-            animate={{
-              width: isComplete
-                ? '100%'
-                : `${Math.max(10, (bootLogs.filter((l) => l.status !== 'PENDING').length / Math.max(1, bootLogs.length)) * 90)}%`,
-            }}
+            initial={{ width: '15%' }}
+            animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.3 }}
           />
         </div>
