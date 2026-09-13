@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../shared/context/AuthContext';
 import campusMap from '../../../../1000139929.png';
@@ -8,6 +8,31 @@ export default function LoginScreen({ onLoginSuccess }) {
   const { signInWithGoogle } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+
+  useEffect(() => {
+    const resetLoadingState = () => {
+      setIsSigningIn(false);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        resetLoadingState();
+      }
+    };
+
+    // Handles Back/Forward navigation cache restoration (bfcache)
+    window.addEventListener('pageshow', resetLoadingState);
+
+    // Handles tab/window refocus if opened or returned to
+    window.addEventListener('focus', resetLoadingState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', resetLoadingState);
+      window.removeEventListener('focus', resetLoadingState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleGoogleSignIn = async () => {
     try {

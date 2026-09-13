@@ -1,14 +1,133 @@
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Calendar, Instagram, ShieldCheck, Linkedin } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchEvents } from '../../shared/lib/api';
+
+/**
+ * Robust matching between an event and a club entity.
+ * Handles UUIDs, casing, prefixes/suffixes, and acronyms (e.g. GDG, GFG, CN).
+ */
+export function matchEventToClub(event, club) {
+  if (!event || !club) return false;
+
+  // 1. Direct ID matches (UUID or numeric string)
+  const clubId = club.id ? String(club.id).trim().toLowerCase() : null;
+  const evtClubId = event.club_id ? String(event.club_id).trim().toLowerCase() : null;
+  const evtClubIdAlt = event.clubId ? String(event.clubId).trim().toLowerCase() : null;
+  const evtOrgId = event.organizer_id ? String(event.organizer_id).trim().toLowerCase() : null;
+
+  if (clubId && (clubId === evtClubId || clubId === evtClubIdAlt || clubId === evtOrgId)) {
+    return true;
+  }
+
+  // 2. Name & Acronym normalizations
+  const rawClubName = (club.name || '').trim().toLowerCase();
+  if (!rawClubName) return false;
+
+  const cleanClub = rawClubName.replace(/[^a-z0-9]/g, '');
+  const clubAcronym = rawClubName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .toLowerCase();
+
+  // Extract all candidate organizer strings from the event
+  const candidates = [
+    event.organizing_club,
+    event.organizer,
+    event.club_name,
+    event.clubName,
+    event.club,
+    event.host,
+  ].filter(Boolean);
+
+  for (const rawCandidate of candidates) {
+    const candidate = String(rawCandidate).trim().toLowerCase();
+    if (!candidate) continue;
+
+    // Exact or substring matches
+    if (candidate === rawClubName) return true;
+    if (candidate.includes(rawClubName) || rawClubName.includes(candidate)) return true;
+
+    // Alphanumeric stripped match
+    const cleanCand = candidate.replace(/[^a-z0-9]/g, '');
+    if (cleanCand && cleanClub && (cleanCand.includes(cleanClub) || cleanClub.includes(cleanCand))) {
+      return true;
+    }
+
+    // Acronym match
+    const candAcronym = candidate
+      .split(/\s+/)
+      .map((w) => w[0])
+      .join('')
+      .toLowerCase();
+
+    if (
+      (clubAcronym.length >= 2 && (cleanCand === clubAcronym || candidate.includes(clubAcronym))) ||
+      (candAcronym.length >= 2 && (cleanClub === candAcronym || rawClubName.includes(candAcronym)))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Filter for active or scheduled events (lenient for timezone/ongoing grace period).
+ */
+export function isEventActiveOrScheduled(event) {
+  if (!event) return false;
+  if (event.is_hidden === true) return false;
+
+  if (event.status && ['rejected', 'cancelled', 'hidden', 'draft'].includes(String(event.status).toLowerCase())) {
+    return false;
+  }
+
+  const rawEnd = event.end_time || event.endTime || event.date;
+  if (rawEnd) {
+    const end = new Date(rawEnd);
+    if (!isNaN(end.getTime())) {
+      // 12h buffer so events scheduled for today remain visible
+      const cutoff = Date.now() - 12 * 60 * 60 * 1000;
+      if (end.getTime() < cutoff) return false;
+    }
+  }
+
+  return true;
+}
 
 function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent }) {
-  if (!isOpen || !club) return null;
+  // 1. Read already-cached events directly from TanStack Query
+  const { data: queryEvents = [], isLoading } = useQuery({
+    queryKey: ['events'],
+    queryFn: fetchEvents,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Filter events organized by this club (by club_id, falling back to name match for old events)
-  const clubEvents = activeEvents.filter(
-    (e) => e.club_id === club.id || (e.organizing_club && e.organizing_club.toLowerCase().includes(club.name.toLowerCase()))
-  );
+  const allEvents = queryEvents && queryEvents.length > 0 ? queryEvents : activeEvents;
+
+  // 2. Filter events matching this club that are active or scheduled
+  const clubEvents = useMemo(() => {
+    if (!club?.id && !club?.name) return [];
+    if (!Array.isArray(allEvents)) return [];
+
+    return allEvents.filter((event) => {
+      return matchEventToClub(event, club) && isEventActiveOrScheduled(event);
+    });
+  }, [allEvents, club]);
+
+  // Log schema & matching results for verification when modal is open
+  useEffect(() => {
+    if (isOpen && club) {
+      console.log('[ClubCardModal] Selected Club Object:', club);
+      console.log('[ClubCardModal] All Cached Events:', allEvents);
+      console.log('[ClubCardModal] Matched Club Events:', clubEvents);
+    }
+  }, [isOpen, club, allEvents, clubEvents]);
+
+  if (!isOpen || !club) return null;
 
   // Consolidate social handles
   const rawSocials = typeof club.social_handles === 'string' ? JSON.parse(club.social_handles) : (club.social_handles || {});
@@ -170,7 +289,11 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
                 </span>
               </div>
 
-              {clubEvents.length === 0 ? (
+              {isLoading && allEvents.length === 0 ? (
+                <div className="p-4 text-center bg-paper/50 border border-dashed border-ink/30 rounded-xs">
+                  <p className="text-xs text-muted font-bold uppercase animate-pulse">CHECKING SCHEDULE...</p>
+                </div>
+              ) : clubEvents.length === 0 ? (
                 <div className="p-4 text-center bg-paper/50 border border-dashed border-ink/30 rounded-xs">
                   <p className="text-xs text-muted font-bold uppercase">— No active events hosted right now.</p>
                 </div>
@@ -186,16 +309,30 @@ function ClubCardModal({ club, isOpen, onClose, activeEvents = [], onSelectEvent
                       className="p-3 bg-card border-2 border-ink shadow-hard rounded-xs hover:bg-paper cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-between group"
                     >
                       <div className="min-w-0 pr-2">
-                        <h4 className="font-display text-lg uppercase text-ink group-hover:text-signal transition-colors truncate">
-                          {evt.title}
-                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-display text-lg uppercase text-ink group-hover:text-signal transition-colors truncate">
+                            {evt.title}
+                          </h4>
+                          {(evt.tag || (Array.isArray(evt.tags) && evt.tags[0]) || (typeof evt.tags === 'string' && evt.tags)) && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 border border-ink bg-signal text-ink uppercase font-semibold shrink-0">
+                              {evt.tag || (Array.isArray(evt.tags) ? evt.tags[0] : evt.tags)}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-[10px] text-muted mt-0.5">
                           <Calendar className="w-3 h-3 text-signal shrink-0" />
                           <span>
-                            {new Date(evt.start_time).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            {evt.start_time ? new Date(evt.start_time).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
                           </span>
-                          <span>•</span>
-                          <span className="truncate">{evt.building_name || 'Campus'}</span>
+                          {(evt.building_name || evt.building) && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">
+                                {evt.building_name || evt.building}
+                                {evt.room_number ? ` (RM: ${evt.room_number})` : ''}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <span className="text-[9px] font-bold bg-signal text-ink border border-ink px-1.5 py-0.5 rounded-xs shrink-0 uppercase">
