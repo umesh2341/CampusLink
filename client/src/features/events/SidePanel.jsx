@@ -73,7 +73,7 @@ function SidePanel({ building, events = [], isLoading = false, isOpen, onClose, 
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
           >
             {/* ── Header ── */}
-            <div className="border-b-2 border-ink p-4 space-y-3 bg-card shrink-0">
+            <div className="p-4 space-y-3 bg-card shrink-0">
               <div className="flex items-start justify-between">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
