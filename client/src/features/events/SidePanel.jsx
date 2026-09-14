@@ -58,7 +58,7 @@ function SidePanel({ building, events = [], isLoading = false, isOpen, onClose, 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-ink/30 backdrop-blur-xs z-40"
+            className="absolute inset-0 bg-ink/30 backdrop-blur-xs z-40"
             onClick={onClose}
           />
 
@@ -68,7 +68,7 @@ function SidePanel({ building, events = [], isLoading = false, isOpen, onClose, 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed z-50 bg-paper flex flex-col font-mono
+            className="absolute z-50 bg-paper flex flex-col font-mono
               inset-x-0 bottom-0 top-0
               sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l-2 sm:border-ink shadow-hard-xl"
           >

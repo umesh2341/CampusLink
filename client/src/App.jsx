@@ -1058,6 +1058,17 @@ function AppContent() {
         )}
         </AnimatePresence>
 
+        {/* ── Side Panel (Building UI) ── */}
+        <SidePanel
+          building={selectedBuilding}
+          events={buildingEvents}
+          isLoading={isBuildingEventsLoading}
+          isOpen={activeOverlay === 'SIDE_PANEL'}
+          onClose={closeOverlay}
+          onSelectEvent={handleSelectEvent}
+          onStartNavigation={handleStartNavigation}
+        />
+
         {/* ── Event Detail Modal (Rendered last so it sits on top of other z-50 modals) ── */}
         <EventDetailModal
           event={selectedEvent}
@@ -1066,16 +1077,8 @@ function AppContent() {
         />
       </main>
 
-      {/* ── Sheets & Modals (Outside main, can cover header/nav if fixed) ── */}
-      <SidePanel
-        building={selectedBuilding}
-        events={buildingEvents}
-        isLoading={isBuildingEventsLoading}
-        isOpen={activeOverlay === 'SIDE_PANEL'}
-        onClose={closeOverlay}
-        onSelectEvent={handleSelectEvent}
-        onStartNavigation={handleStartNavigation}
-      />
+      {/* ── Global Sheets & Modals (Outside main, covers everything) ── */}
+
 
       {/* ── Student Feedback Modal ── */}
       <FeedbackModal
