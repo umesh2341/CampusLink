@@ -85,7 +85,11 @@ function EventManagementModal({ isOpen, onClose, userId, isAdmin, onHidden }) {
                 <div className="min-w-0">
                   <h4 className="font-display text-lg uppercase text-ink truncate">{event.title}</h4>
                   <p className="text-[10px] text-muted uppercase truncate">{event.building_name} • {new Date(event.start_time).toLocaleString()}</p>
-                  {isAdmin && <p className="text-[10px] text-muted uppercase mt-1">CREATOR: {event.created_by || 'UNKNOWN'}</p>}
+                  {isAdmin && (
+                    <p className="text-[10px] text-muted uppercase mt-1 truncate">
+                      CREATOR: {event.creator_name || 'UNKNOWN'} {event.creator_email && `(${event.creator_email})`}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleHide(event)}

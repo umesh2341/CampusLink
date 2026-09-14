@@ -1058,6 +1058,12 @@ function AppContent() {
         )}
         </AnimatePresence>
 
+        {/* ── Event Detail Modal (Rendered last so it sits on top of other z-50 modals) ── */}
+        <EventDetailModal
+          event={selectedEvent}
+          isOpen={isEventModalOpen}
+          onClose={() => { setIsEventModalOpen(false); setSelectedEvent(null); }}
+        />
       </main>
 
       {/* ── Sheets & Modals (Outside main, can cover header/nav if fixed) ── */}
@@ -1069,14 +1075,6 @@ function AppContent() {
         onClose={closeOverlay}
         onSelectEvent={handleSelectEvent}
         onStartNavigation={handleStartNavigation}
-      />
-
-
-      {/* ── Event Detail Modal (Rendered last so it sits on top of other z-50 modals) ── */}
-      <EventDetailModal
-        event={selectedEvent}
-        isOpen={isEventModalOpen}
-        onClose={() => { setIsEventModalOpen(false); setSelectedEvent(null); }}
       />
 
       {/* ── Student Feedback Modal ── */}

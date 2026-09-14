@@ -29,7 +29,7 @@ function EventDetailModal({ event, isOpen, onClose }) {
   return (
     <AnimatePresence>
       {isOpen && event && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 font-mono select-none">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-mono select-none">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -46,7 +46,7 @@ function EventDetailModal({ event, isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative z-50 w-full max-w-md sm:max-w-lg bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col max-h-[92vh] overflow-hidden"
+            className="relative z-50 w-full max-w-md sm:max-w-lg bg-card border-2 border-ink shadow-hard-xl rounded-xs flex flex-col h-full max-h-full overflow-hidden"
           >
             {/* ── Top Bar (ticket header) ── */}
             <div className="bg-ink text-paper px-4 py-2 flex items-center justify-between shrink-0">
@@ -147,7 +147,7 @@ function EventDetailModal({ event, isOpen, onClose }) {
               {/* Description */}
               <div className="px-4 pb-4 space-y-1">
                 <span className="block text-[9px] font-bold uppercase tracking-widest text-muted">[ ABOUT ]</span>
-                <p className="max-h-24 overflow-y-auto overscroll-contain text-xs text-ink/90 leading-relaxed whitespace-pre-wrap bg-paper border border-ink/10 rounded-xs p-2.5">
+                <p className="text-xs text-ink/90 leading-relaxed whitespace-pre-wrap bg-paper border border-ink/10 rounded-xs p-2.5">
                   {event.description}
                 </p>
               </div>

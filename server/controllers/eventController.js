@@ -174,9 +174,12 @@ export const getManageableEvents = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     const query = `
       SELECT e.*, e.${evtClub} AS organizing_club, e.${evtReg} AS registration_url,
-             b.name AS building_name
+             b.name AS building_name,
+             p.full_name AS creator_name,
+             p.email AS creator_email
       FROM events e
       JOIN buildings b ON e.building_id = b.id
+      LEFT JOIN profiles p ON e.created_by = p.id
       WHERE e.end_time >= NOW()
         AND NOT e.is_hidden
         AND (e.created_by = $1 OR $2 = TRUE)
