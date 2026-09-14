@@ -147,7 +147,7 @@ function EventDetailModal({ event, isOpen, onClose }) {
               {/* Description */}
               <div className="px-4 pb-4 space-y-1">
                 <span className="block text-[9px] font-bold uppercase tracking-widest text-muted">[ ABOUT ]</span>
-                <p className="text-xs text-ink/90 leading-relaxed whitespace-pre-wrap bg-paper border border-ink/10 rounded-xs p-2.5">
+                <p className="max-h-24 overflow-y-auto overscroll-contain text-xs text-ink/90 leading-relaxed whitespace-pre-wrap bg-paper border border-ink/10 rounded-xs p-2.5">
                   {event.description}
                 </p>
               </div>
