@@ -185,10 +185,11 @@ function AppContent() {
   const [bootLogs, setBootLogs] = useState([
     { id: 'map', label: '> MOUNTING SVG CAMPUS MAP ..........', status: 'PENDING' },
     { id: 'events', label: '> SYNCING ACTIVE EVENTS ...........', status: 'PENDING' },
-    { id: 'clubs', label: '> FETCHING CLUBS DIRECTORY ........', status: 'PENDING' },
     { id: 'notices', label: '> LOADING CAMPUS NOTICES ..........', status: 'PENDING' },
   ]);
   const [statusText, setStatusText] = useState('BOOTING SYSTEM...');
+  const [bootWarning, setBootWarning] = useState('');
+  const [bootError, setBootError] = useState('');
 
   useEffect(() => {
     const image = new Image();
@@ -203,35 +204,51 @@ function AppContent() {
       const tasks = [
         { id: 'map', queryKey: ['buildings'], queryFn: fetchBuildings },
         { id: 'events', queryKey: ['events'], queryFn: fetchEvents },
-        { id: 'clubs', queryKey: ['clubs'], queryFn: fetchClubs },
         { id: 'notices', queryKey: ['notices'], queryFn: fetchNotices },
       ];
 
       const startTime = Date.now();
 
-      // Launch all prefetch requests in parallel using Promise.allSettled
+      // Fetch required startup data in parallel, with one explicit retry per request.
       const results = await Promise.allSettled(
         tasks.map(async (t) => {
-          try {
-            await queryClient.prefetchQuery({
-              queryKey: t.queryKey,
-              queryFn: t.queryFn,
-              staleTime: 5 * 60 * 1000,
-            });
-            if (isMounted) {
-              setBootLogs((prev) =>
-                prev.map((log) => (log.id === t.id ? { ...log, status: 'OK' } : log))
-              );
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              const data = await queryClient.fetchQuery({
+                queryKey: t.queryKey,
+                queryFn: t.queryFn,
+                staleTime: 5 * 60 * 1000,
+                retry: 0,
+              });
+
+              if (!Array.isArray(data)) {
+                throw new Error(`Invalid response for ${t.id}`);
+              }
+
+              if (isMounted) {
+                setBootLogs((prev) =>
+                  prev.map((log) => (log.id === t.id ? { ...log, status: 'OK' } : log))
+                );
+              }
+              return { id: t.id, ok: true };
+            } catch (err) {
+              if (attempt === 0) {
+                console.warn(`Boot fetch retry [${t.id}]:`, err);
+                if (isMounted) {
+                  setBootWarning('Some campus data is taking longer than expected. Retrying...');
+                }
+                await new Promise((resolve) => setTimeout(resolve, 700));
+                continue;
+              }
+
+              console.warn(`Boot fetch failed [${t.id}]:`, err);
+              if (isMounted) {
+                setBootLogs((prev) =>
+                  prev.map((log) => (log.id === t.id ? { ...log, status: 'FAIL' } : log))
+                );
+              }
+              return { id: t.id, ok: false };
             }
-            return { id: t.id, ok: true };
-          } catch (err) {
-            console.warn(`Boot prefetch warning [${t.id}]:`, err);
-            if (isMounted) {
-              setBootLogs((prev) =>
-                prev.map((log) => (log.id === t.id ? { ...log, status: 'FAIL' } : log))
-              );
-            }
-            return { id: t.id, ok: false };
           }
         })
       );
@@ -245,11 +262,15 @@ function AppContent() {
 
       const hasFailures = results.some((r) => r.status === 'rejected' || (r.value && !r.value.ok));
       if (hasFailures) {
-        setStatusText('LAUNCHING CAMPUSLINK...');
-      } else {
-        setStatusText('LAUNCHING CAMPUSLINK...');
+        if (isMounted) {
+          setBootWarning('');
+          setBootError('There seems to be a server-related issue. Please reload the app.');
+        }
+        return;
       }
 
+      setBootWarning('');
+      setStatusText('LAUNCHING CAMPUSLINK...');
       await new Promise((r) => setTimeout(r, 450));
       if (isMounted) {
         setIsInitializing(false);
@@ -277,10 +298,16 @@ function AppContent() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: clubs = [], isLoading: isClubsLoading } = useQuery({
+  const {
+    data: clubs = [],
+    isLoading: isClubsLoading,
+    isError: isClubsError,
+    refetch: refetchClubs,
+  } = useQuery({
     queryKey: ['clubs'],
     queryFn: fetchClubs,
     staleTime: 5 * 60 * 1000,
+    enabled: activeOverlay === 'CLUBS',
   });
 
   const { data: notices = [] } = useQuery({
@@ -674,6 +701,8 @@ function AppContent() {
             key="terminal-boot-screen"
             bootLogs={bootLogs}
             statusText={statusText}
+            warningText={bootWarning}
+            errorText={bootError}
             isComplete={!isBooting}
           />
         )}
@@ -856,6 +885,8 @@ function AppContent() {
           clubs={clubs}
           activeEvents={events.length > 0 ? events : allActiveEvents}
           isLoading={isClubsLoading}
+          isError={isClubsError}
+          onRetry={refetchClubs}
           onSelectClub={(club) => {
             setSelectedClub(club);
             setIsClubDetailOpen(true);

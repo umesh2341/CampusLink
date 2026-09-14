@@ -6,7 +6,7 @@ import { dispatchNoticePushNotification } from '../services/pushService.js';
 export const getNotices = async (req, res) => {
   try {
     const query = `
-      SELECT id, title, category, body, published_at, expires_at, document_url, created_at, tags
+      SELECT id, title, category, body, published_at, expires_at, document_url, created_at, tags, created_by
       FROM notices
       WHERE published_at <= NOW()
         AND (expires_at IS NULL OR expires_at > NOW())
@@ -34,21 +34,22 @@ export const createNotice = async (req, res) => {
     
     // Ensure tags is an array
     const noticeTags = Array.isArray(tags) ? tags : [];
+    const createdBy = req.user?.id || null;
     
     if (expires_in_days) {
       query = `
-        INSERT INTO notices (title, category, body, document_url, expires_at, tags)
-        VALUES ($1, $2, $3, $4, NOW() + ($5 || ' days')::INTERVAL, $6)
+        INSERT INTO notices (title, category, body, document_url, expires_at, tags, created_by)
+        VALUES ($1, $2, $3, $4, NOW() + ($5 || ' days')::INTERVAL, $6, $7)
         RETURNING *;
       `;
-      params = [title, category, body, document_url || null, parseInt(expires_in_days, 10), noticeTags];
+      params = [title, category, body, document_url || null, parseInt(expires_in_days, 10), noticeTags, createdBy];
     } else {
       query = `
-        INSERT INTO notices (title, category, body, document_url, tags)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO notices (title, category, body, document_url, tags, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *;
       `;
-      params = [title, category, body, document_url || null, noticeTags];
+      params = [title, category, body, document_url || null, noticeTags, createdBy];
     }
     
     const { rows } = await pool.query(query, params);

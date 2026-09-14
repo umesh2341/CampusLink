@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { RefreshCw } from 'lucide-react';
 
 const FUNNY_PHRASES = [
   "> Waking up the campus hamsters...",
@@ -17,7 +18,13 @@ const FUNNY_PHRASES = [
  * Full-screen loading overlay styled as a terminal / wayfinding kiosk.
  * Displays real-time prefetch progress for baseline datasets before fading out.
  */
-export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM...', isComplete = false }) {
+export function TerminalBootScreen({
+  bootLogs = [],
+  statusText = 'BOOTING SYSTEM...',
+  warningText = '',
+  errorText = '',
+  isComplete = false,
+}) {
   const [text, setText] = useState('> ');
   const [isDeleting, setIsDeleting] = useState(false);
   const [loopNum, setLoopNum] = useState(0);
@@ -57,6 +64,17 @@ export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.4, ease: 'easeOut' } }}
       className="fixed inset-0 z-[9999] bg-paper text-ink flex flex-col items-center justify-center p-4 sm:p-6 font-mono select-none overflow-hidden bg-grain"
     >
+      {errorText ? (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          aria-label="Reload CampusLink"
+          title="Reload CampusLink"
+          className="p-3 border-2 border-ink rounded-full bg-signal text-ink shadow-hard-xl hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]"
+        >
+          <RefreshCw className="w-6 h-6" />
+        </button>
+      ) : (
       <div className="w-full max-w-lg bg-paper border-2 border-ink shadow-hard-xl rounded-sm p-4 sm:p-6 flex flex-col space-y-4">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b-2 border-ink pb-3">
@@ -93,7 +111,15 @@ export function TerminalBootScreen({ bootLogs = [], statusText = 'BOOTING SYSTEM
             transition={{ duration: 0.3 }}
           />
         </div>
+
+        {warningText && (
+          <p className="text-[10px] text-signal font-bold uppercase text-center leading-relaxed">
+            {warningText}
+          </p>
+        )}
+
       </div>
+      )}
     </motion.div>
   );
 }

@@ -1,10 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Search, ChevronRight, Sparkles, Filter } from 'lucide-react';
+import { X, Users, Search, ChevronRight, RefreshCw } from 'lucide-react';
 
 const CATEGORIES = ['ALL', 'TECHNICAL', 'CULTURAL', 'SPORTS', 'LITERARY', 'OFFICIAL'];
 
-function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], onSelectClub, isLoading }) {
+function ClubsDirectoryModal({
+  isOpen,
+  onClose,
+  clubs = [],
+  activeEvents = [],
+  onSelectClub,
+  isLoading,
+  isError,
+  onRetry,
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -125,6 +134,21 @@ function ClubsDirectoryModal({ isOpen, onClose, clubs = [], activeEvents = [], o
                 <span className="font-mono text-sm font-bold tracking-widest uppercase animate-pulse">
                   [ LOADING CLUBS... ]
                 </span>
+              </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-6">
+                <p className="font-display text-xl uppercase text-ink">— CLUBS UNAVAILABLE —</p>
+                <p className="text-xs text-muted uppercase leading-relaxed">
+                  Unable to load the club directory from the server.
+                </p>
+                <button
+                  onClick={onRetry}
+                  aria-label="Retry loading clubs"
+                  title="Retry loading clubs"
+                  className="p-2 border-2 border-ink rounded-xs bg-signal text-ink shadow-hard hover:bg-ink hover:text-paper transition-all active:translate-y-[1px]"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
             ) : filteredClubs.length === 0 ? (
               <div className="p-8 text-center bg-card border-2 border-ink rounded-xs space-y-1">

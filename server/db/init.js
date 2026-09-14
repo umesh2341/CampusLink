@@ -156,8 +156,12 @@ async function run() {
         published_at TIMESTAMPTZ DEFAULT NOW(),
         expires_at TIMESTAMPTZ,
         document_url TEXT,
+        tags TEXT[] DEFAULT '{}',
+        created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
-      )
+      );
+      ALTER TABLE notices ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+      ALTER TABLE notices ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES profiles(id) ON DELETE SET NULL;
     `);
     console.log('Notices table ensured.');
 

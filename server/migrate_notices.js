@@ -6,6 +6,7 @@ async function runMigration() {
 
     await pool.query(`
       ALTER TABLE notices ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+      ALTER TABLE notices ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES profiles(id) ON DELETE SET NULL;
       ALTER TABLE subscription_preferences ADD COLUMN IF NOT EXISTS enabled_notice_years TEXT[] DEFAULT ARRAY['1st_year', '2nd_year', '3rd_year', '4th_year', 'general'];
     `);
 

@@ -28,6 +28,12 @@ async function seedNotices() {
     console.log('Adding document_url column...');
     await pool.query(`ALTER TABLE notices ADD COLUMN IF NOT EXISTS document_url TEXT;`);
 
+    console.log('Adding tags column...');
+    await pool.query(`ALTER TABLE notices ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`);
+
+    console.log('Adding created_by column...');
+    await pool.query(`ALTER TABLE notices ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES profiles(id) ON DELETE SET NULL;`);
+
     console.log('Inserting sample notices (skips if title already exists)...');
 
     const notices = [
